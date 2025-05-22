@@ -1,0 +1,69 @@
+
+.label-text{
+    
+  
+        font-size: 14px;
+        font-weight: bold;
+        color: #333;
+        
+      
+}
+.merchant-name {
+    font-style: italic;
+    color:#005580; /* Change the color as needed */
+    font-weight: bold; /* Optional */
+  }
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  .stepper {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.step {
+  flex: 1;
+  position: relative;
+  text-align: center;
+  font-weight: bold;
+  color: #999;
+}
+.step::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #e0e0e0;
+  z-index: -1;
+}
+.step:first-child::before {
+  left: 10%;
+}
+.step:last-child::before {
+  right: 10%;
+}
+
+.step-indicator {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+.step.completed .step-indicator {
+  background: #76c7c0;
+}
+.step.current .step-indicator {
+  background: #005580;
+}
+.step.completed,
+.step.current {
+  color: #333;
+}

@@ -1,0 +1,190 @@
+.custom-table {
+  border-collapse: collapse;
+  margin: 5px 0;
+  font-size: 14px;          /* Keep text size the same */
+  width: 100%;
+  background-color: #fff;
+  box-shadow: 0px 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.custom-table thead {
+  background-color: #005580;
+  color: white;
+  font-weight: bold;
+ margin-left: -200px; /* Moves the element 200px to the left */
+
+  
+}
+
+.custom-table th, .custom-table td {
+  padding: 0px 0px;        /* Reduce padding to make rows thinner */
+  text-align: left;
+  border: 1px solid #dee2e6;
+  line-height: 0.9;          /* Reduce line height for thinner rows */
+}
+
+.custom-table tbody tr {
+  height: -22px;            /* Explicitly set a smaller row height */
+}
+
+.custom-table tbody tr:hover {
+  background-color: #a39e9e;
+  transition: 0.2s;
+}
+
+.text-center {
+  /* text-align: center; */
+  padding: 2px;            /* Reduce padding if needed */
+}
+
+.form-control {
+  border: 1px solid #005580;
+  padding: 4px;            /* Keep padding for inputs reasonable */
+  font-size: 14px;         /* Keep input text size the same */
+}
+
+.date-picker-custom {
+  border: 1px solid #005580 !important;
+  padding: 4px;            /* Keep padding reasonable for date picker */
+  border-radius: 4px;
+  width: 100%;
+  height: 45px;            /* Reduce height for date picker */
+  cursor: pointer;
+  background-color: #fff;
+  font-size: 14px;
+}
+
+.button1 {
+  background-color: #005580 !important;
+  border: none;
+  padding: 4px 8px;        /* Reduce padding for smaller button */
+  font-size: 14px;
+  border-radius: 3px;
+  height: 45px;            /* Reduce height for buttons */
+
+}
+
+.button1:hover {
+  background-color: #003f66 !important;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  list-style: none;
+  padding: 5px;
+}
+
+.pagination li {
+  margin: 2px;
+  padding: 2px 6px;        /* Reduce padding for smaller pagination items */
+  border: 1px solid #005580;
+  border-radius: 3px;
+  cursor: pointer;
+  background-color: #f8f9fa;
+  font-size: 14px;
+}
+
+.pagination li.active {
+  background-color: #005580;
+  color: white;
+}
+
+.container {
+  padding-top: 0;
+  margin-top: 0;
+}
+
+h5.text-center.my-4 {
+  margin-bottom: 0;
+}
+
+.table {
+  margin-top: 0;
+  border-collapse: collapse; 
+}
+
+td, th {
+  padding: 0; /* Optional: Removes inner cell padding */
+}
+
+
+/* Table container styling */
+.table-container {
+   border-collapse: collapse;
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #f9f9f9; /* Light background color */
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow */
+}
+
+/* Custom table styling */
+.custom-table {
+  border-collapse: collapse; /* Collapsing borders for seamless lines */
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+/* Table header styling */
+.custom-table thead {
+  background-color: #005580;
+  color: #ffffff;
+}
+
+.custom-table th {
+  padding: 12px 15px;
+  text-align: left;
+  font-size: 14px;
+}
+
+/* Table row styling */
+.custom-table tbody tr {
+  border-bottom: 2px solid #ddd; /* Border between rows */
+}
+
+.custom-table tbody tr:hover {
+  background-color: #f1f1f1; /* Light gray background on hover */
+}
+
+/* Table cell styling */
+.custom-table td {
+  padding: 10px 15px;
+  text-align: center;
+  font-size: 13px;
+  border-right: 1px solid #ddd; /* Border between columns */
+}
+
+/* Styling for specific columns */
+.custom-table td.text-center {
+  text-align: center;
+}
+
+/* Add a striped effect for table rows */
+.custom-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* Custom border styling */
+.custom-table th, .custom-table td {
+  border-left: 1px solid #ddd; /* Border for all cells */
+  border-top: 1px solid #ddd; /* Top border for the cells */
+}
+
+/* Remove border for the last cell of each row */
+.custom-table td:last-child,
+.custom-table th:last-child {
+  border-right: 0; /* Remove right border for last column */
+}
+
+/* Add padding and spacing to pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  padding-top: 15px;
+}
+
+.pagination .active {
+  background-color: #007bff;
+  color: #fff;
+}
