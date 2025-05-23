@@ -3,7 +3,9 @@ import { Form, Button } from "react-bootstrap";
 import axios from "axios";
 import { FaCheckCircle } from "react-icons/fa";
 import "../../../assets/css/style.css";
-
+import { grcodeapi } from "../../../services/qrcodeApi";
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
 const steps = ["Branch & Account", "Merchant Details", "Summary"];
 const percentages = [33, 66, 100];
 
@@ -20,6 +22,7 @@ const CreateMerchantForm = () => {
     mer_location: "",
     mer_phone: "",
     mer_email: "",
+    MAC_LABE: "",
     mer_catagory_code: "",
     mer_creation_date: new Date().toISOString().split("T")[0],
     mer_id: "",
@@ -28,67 +31,144 @@ const CreateMerchantForm = () => {
   const [mccList, setMccList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState("");
-
+  const [branchOptions, setBranchOptions] = useState([]);
+  const [accountError, setAccountError] = useState("");
+  const [merchantSeq, setMerchantSeq] = useState(1);
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const searchBranches = async (query) => {
-    if (!query) return setBranches([]);
-    setLoading(true);
-    try {
-      const res = await axios.get(
-        `http://localhost:8089/api/getAllBranch?query=${query}`
-      );
-      setBranches(res.data || []);
-      console.log(
-        "Branches:is ddddddddddddddddddddddddddddddddddddddddddddddddddd",
-        res.data
-      );
-      const match = res.data.find((b) => b.branch_name === query);
-      if (match) {
-        setForm((p) => ({
-          ...p,
-          mer_branch_name: match.branch_name,
-          mer_branch_code: match.branch_code,
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await axios.get("http://localhost:8089/api/getAllBranch");
+        console.log("💾 raw response:", res.data);
+
+        // 1) Figure out where the array lives:
+        //    a) If res.data is already an array, use that.
+        //    b) Else if res.data.branches is an array, use that.
+        //    c) Else if res.data.data is an array, use that.
+        //    d) Otherwise fall back to an empty list.
+        let list = [];
+        if (Array.isArray(res.data)) {
+          list = res.data;
+        } else if (Array.isArray(res.data.branches)) {
+          list = res.data.branches;
+        } else if (Array.isArray(res.data.data)) {
+          list = res.data.data;
+        } else {
+          console.warn("getAllBranch returned unexpected shape:", res.data);
+        }
+
+        // 2) Now map safely
+        const opts = list.map((b) => ({
+          code: b.branch_code || b.branch_code,
+          name: b.branch_name || b.name,
         }));
+
+        console.log("🌿 normalized branchOptions:", opts);
+        setBranchOptions(opts);
+      } catch (err) {
+        console.error("Failed to load branches", err);
       }
-    } catch (err) {
-      console.error("Error fetching branches:", err);
-    } finally {
-      setLoading(false);
+    })();
+  }, []);
+
+  const fetchAccount = async () => {
+    const acctNo = form.mer_account;
+    if (!acctNo) return;
+
+    try {
+      // 1) Fetch from your exact endpoint
+      const res = await axios.get(
+        `http://localhost:8089/api/getAccountByNumber/${acctNo}`
+      );
+      console.log("🔍 raw account response:", res.data);
+
+      // 2) Normalize to one object `acct`
+      let acct = {};
+      // (a) If res.data itself has the keys
+      if (
+        res.data &&
+        (res.data.currency !== undefined || res.data.CCY !== undefined)
+      ) {
+        acct = res.data;
+      }
+      // (b) Or if it’s nested under .data
+      else if (
+        res.data &&
+        typeof res.data.data === "object" &&
+        (res.data.data.currency !== undefined ||
+          res.data.data.CCY !== undefined)
+      ) {
+        acct = res.data.data;
+      }
+      // (c) Or nested under .account
+      else if (
+        res.data &&
+        typeof res.data.account === "object" &&
+        (res.data.account.currency !== undefined ||
+          res.data.account.CCY !== undefined)
+      ) {
+        acct = res.data.account;
+      } else {
+        console.warn("Unexpected shape for account response:", res.data);
+      }
+
+      // 3) Pull out the two fields, with fallbacks
+      const currency = acct.currency ?? acct.CCY ?? "";
+      const owner = acct.account_owner ?? acct.ac_desc ?? "";
+
+      // 4) Update your form
+      setForm((prev) => ({
+        ...prev,
+        mer_currency: currency,
+        mer_owner_name: owner,
+      }));
+    } catch (error) {
+      console.error("Error fetching account:", error);
+      // Optionally clear fields on error:
+      // setForm(prev => ({ ...prev, mer_currency: "", mer_owner_name: "" }));
     }
   };
 
-  const fetchAccount = async () => {
-    if (!form.mer_account) return;
-    try {
-      const { data } = await axios.get(
-        `/api/merchant/getAccountByNumber/${form.mer_account}`
-      );
-      setForm((p) => ({
-        ...p,
-        mer_currency: data.currency || "",
-        mer_owner_name: data.account_owner || "",
-      }));
-    } catch {}
-  };
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await axios.get("http://localhost:8089/api/mcc");
+        console.log("💾 raw MCC response:", res.data);
 
-  const searchMcc = async (query) => {
-    if (!query) return setMccList([]);
-    try {
-      const { data } = await axios.get(
-        `/api/merchant/getMccByCode?code=${query}`
-      );
-      setMccList(data);
-    } catch {}
-  };
+        let list = [];
+        if (Array.isArray(res.data)) {
+          list = res.data;
+        } else if (Array.isArray(res.data.mccs)) {
+          list = res.data.mccs;
+        } else if (Array.isArray(res.data.data)) {
+          list = res.data.data;
+        } else {
+          console.warn("getMcc returned unexpected shape:", res.data);
+        }
 
-  const generateMerchantId = () => {
-    if (!form.mer_catagory_code || !form.mer_branch_code) return "";
-    const rand = Math.floor(10000 + Math.random() * 90000);
-    return `${form.mer_catagory_code}${form.mer_branch_code}${rand}`;
+        const opts = list.map((b) => ({
+          MAC_IDEN: b.MAC_IDEN || b.mcc_code || "",
+          MAC_LABE: b.MAC_LABE || b.mcc_description || "",
+        }));
+
+        console.log("🌿 normalized MCC list:", opts);
+        setMccList(opts);
+        console.log("✅ Final MCC list set:", opts);
+      } catch (err) {
+        console.error("Failed to load MCCs", err);
+      }
+    })();
+  }, []);
+
+  const generateMerchantId = (formData) => {
+    if (!formData.mer_catagory_code || !formData.mer_branch_code) return "";
+
+    const rand = String(Math.floor(10000 + Math.random() * 90000));
+    return `${formData.mer_branch_code}${formData.mer_catagory_code}${rand}`;
   };
 
   const handleNext = () => {
@@ -99,6 +179,38 @@ const CreateMerchantForm = () => {
   };
   const handlePrev = () => {
     if (step > 0) setStep((s) => s - 1);
+  };
+
+  const handleBranchChange = (_, option) => {
+    if (option) {
+      const newForm = {
+        ...form,
+        mer_branch_name: option.name,
+        mer_branch_code: option.code,
+      };
+      newForm.mer_id = generateMerchantId(newForm);
+      setForm(newForm);
+    } else {
+      setForm((p) => ({
+        ...p,
+        mer_branch_name: "",
+        mer_branch_code: "",
+        mer_id: "",
+      }));
+    }
+  };
+
+  const handleMccChange = (_, option) => {
+    if (option) {
+      const newForm = {
+        ...form,
+        mer_catagory_code: option.MAC_IDEN,
+      };
+      newForm.mer_id = generateMerchantId(newForm);
+      setForm(newForm);
+    } else {
+      setForm((p) => ({ ...p, mer_catagory_code: "", mer_id: "" }));
+    }
   };
 
   const handleSubmit = async () => {
@@ -158,22 +270,27 @@ const CreateMerchantForm = () => {
         <div className="row gx-3">
           <div className="col-md-4 mb-3">
             <Form.Label>Branch Name</Form.Label>
-            <Form.Control
-              type="text"
-              name="mer_branch_name"
-              value={form.mer_branch_name}
-              onChange={handleChange}
-              onBlur={(e) => searchBranches(e.target.value)}
-              list="branchList"
-              placeholder="Enter branch name"
-              style={{ border: "1px solid #005580" }}
-              autoComplete="off"
-            />
-            <datalist id="branchList">
-              {branches.map((b) => (
-                <option key={b.branch_code} value={b.branch_name} />
-              ))}
-            </datalist>
+            <Form.Group className="mb-3">
+              <Autocomplete
+                options={branchOptions}
+                getOptionLabel={(opt) => opt.name}
+                onChange={handleBranchChange}
+                value={
+                  form.mer_branch_code
+                    ? { code: form.mer_branch_code, name: form.mer_branch_name }
+                    : null
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Select or type branch"
+                    variant="outlined"
+                    size="small"
+                  />
+                )}
+                isOptionEqualToValue={(opt, val) => opt.code === val.code}
+              />
+            </Form.Group>
           </div>
           <div className="col-md-4 mb-3">
             <Form.Label>Branch Code</Form.Label>
@@ -219,23 +336,32 @@ const CreateMerchantForm = () => {
           </div>
           <div className="col-md-4 mb-3">
             <Form.Label>MCC Code</Form.Label>
-            <Form.Control
-              name="mer_catagory_code"
-              value={form.mer_catagory_code}
-              onChange={handleChange}
-              onBlur={(e) => searchMcc(e.target.value)}
-              list="mccList"
-              placeholder="Enter MCC code"
-              style={{ border: "1px solid #005580" }}
-              autoComplete="off"
-            />
-            <datalist id="mccList">
-              {mccList.map((mcc) => (
-                <option key={mcc.code} value={mcc.code}>
-                  {mcc.label}
-                </option>
-              ))}
-            </datalist>
+            <Form.Group className="mb-3">
+              <Autocomplete
+                options={mccList}
+                getOptionLabel={(option) =>
+                  `${option.MAC_IDEN} - ${option.MAC_LABE}`
+                }
+                filterOptions={(options, { inputValue }) =>
+                  options.filter(
+                    (opt) =>
+                      opt.MAC_IDEN.toLowerCase().includes(
+                        inputValue.toLowerCase()
+                      ) ||
+                      opt.MAC_LABE.toLowerCase().includes(
+                        inputValue.toLowerCase()
+                      )
+                  )
+                }
+                onChange={handleMccChange}
+                renderInput={(params) => (
+                  <TextField {...params} label="" />
+                )}
+                isOptionEqualToValue={(option, value) =>
+                  option.MAC_IDEN === value.MAC_IDEN
+                }
+              />
+            </Form.Group>
           </div>
           <div className="col-12 text-end">
             <Button onClick={handleNext}>Next</Button>

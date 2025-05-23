@@ -4,8 +4,12 @@
   "private": true,
   "proxy": "http://10.1.85.10",
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
     "@fullcalendar/daygrid": "^5.9.0",
     "@fullcalendar/react": "^5.9.0",
+    "@mui/icons-material": "^7.1.0",
+    "@mui/material": "^7.1.0",
     "@reduxjs/toolkit": "^2.5.0",
     "@testing-library/jest-dom": "^5.11.10",
     "@testing-library/react": "^11.2.6",
