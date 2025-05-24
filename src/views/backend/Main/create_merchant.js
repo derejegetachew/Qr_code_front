@@ -34,6 +34,10 @@ const CreateMerchantForm = () => {
   const [branchOptions, setBranchOptions] = useState([]);
   const [accountError, setAccountError] = useState("");
   const [merchantSeq, setMerchantSeq] = useState(1);
+  const [branchCodeError, setBranchCodeError] = useState("");
+  const [currencyError, setCurrencyError] = useState("");
+  const [ownerNameError, setOwnerNameError] = useState("");
+  const [categoryCodeError, setCategoryCodeError] = useState("");
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -182,12 +186,58 @@ const CreateMerchantForm = () => {
     return `${formData.mer_branch_code}${formData.mer_catagory_code}${rand}`;
   };
 
+  // const handleNext = () => {
+  //   if (step === 1) {
+  //     setForm((p) => ({ ...p, mer_id: generateMerchantId(p) }));
+  //   }
+  //   if (step < steps.length - 1) setStep((s) => s + 1);
+  // };
+
   const handleNext = () => {
-    if (step === 1) {
-      setForm((p) => ({ ...p, mer_id: generateMerchantId(p) }));
+    if (step === 0) {
+      let hasError = false;
+
+      if (!form.mer_branch_code) {
+        setBranchCodeError("❌ Please select a branch code");
+        setTimeout(() => setBranchCodeError(""), 3000);
+        hasError = true;
+      }
+
+      if (!form.mer_account) {
+        setAccountError("❌ Please enter an account number");
+        setTimeout(() => setAccountError(""), 3000);
+        setForm((prev) => ({
+          ...prev,
+          mer_currency: "",
+          mer_owner_name: "",
+        }));
+        hasError = true;
+      }
+
+      if (!form.mer_currency) {
+        setCurrencyError("❌ Currency is required");
+        setTimeout(() => setCurrencyError(""), 3000);
+        hasError = true;
+      }
+
+      if (!form.mer_owner_name) {
+        setOwnerNameError("❌ Owner name is required");
+        setTimeout(() => setOwnerNameError(""), 3000);
+        hasError = true;
+      }
+
+      if (!form.mer_catagory_code) {
+        setCategoryCodeError("❌ Please select a category code");
+        setTimeout(() => setCategoryCodeError(""), 3000);
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      setStep((s) => s + 1);
     }
-    if (step < steps.length - 1) setStep((s) => s + 1);
   };
+
   const handlePrev = () => {
     if (step > 0) setStep((s) => s - 1);
   };
@@ -302,6 +352,14 @@ const CreateMerchantForm = () => {
                 isOptionEqualToValue={(opt, val) => opt.code === val.code}
               />
             </Form.Group>
+            {branchCodeError && (
+              <div
+                className="text-danger mt-1"
+                style={{ fontSize: "0.875rem" }}
+              >
+                {branchCodeError}
+              </div>
+            )}
           </div>
           <div className="col-md-4 mb-3">
             <Form.Label>Branch Code</Form.Label>
@@ -393,7 +451,16 @@ const CreateMerchantForm = () => {
                 }
               />
             </Form.Group>
+            {categoryCodeError && (
+              <div
+                className="text-danger mt-1"
+                style={{ fontSize: "0.875rem" }}
+              >
+                {categoryCodeError}
+              </div>
+            )}
           </div>
+
           <div className="col-12 text-end">
             <Button onClick={handleNext}>Next</Button>
           </div>
