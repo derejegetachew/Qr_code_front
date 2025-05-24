@@ -77,8 +77,12 @@ const CreateMerchantForm = () => {
 
   const fetchAccount = async () => {
     const acctNo = form.mer_account;
-    if (!acctNo) return;
-
+    if (!acctNo) {
+      setAccountError("❌ Please enter an account number");
+      setTimeout(() => setAccountError(""), 3000);
+      setForm((prev) => ({ ...prev, mer_currency: "", mer_owner_name: "" }));
+      return;
+    }
     try {
       // 1) Fetch from your exact endpoint
       const res = await axios.get(
@@ -119,7 +123,12 @@ const CreateMerchantForm = () => {
       // 3) Pull out the two fields, with fallbacks
       const currency = acct.currency ?? acct.CCY ?? "";
       const owner = acct.account_owner ?? acct.ac_desc ?? "";
-
+      if (!currency && !owner) {
+        setAccountError("❌ Invalid account number");
+        setForm((prev) => ({ ...prev, mer_currency: "", mer_owner_name: "" }));
+        setTimeout(() => setAccountError(""), 3000);
+        return;
+      }
       // 4) Update your form
       setForm((prev) => ({
         ...prev,
@@ -129,7 +138,9 @@ const CreateMerchantForm = () => {
     } catch (error) {
       console.error("Error fetching account:", error);
       // Optionally clear fields on error:
-      // setForm(prev => ({ ...prev, mer_currency: "", mer_owner_name: "" }));
+      setAccountError("❌ merchant account number is  not found");
+      setForm((prev) => ({ ...prev, mer_currency: "", mer_owner_name: "" }));
+      setTimeout(() => setAccountError(""), 3000);
     }
   };
 
@@ -173,7 +184,7 @@ const CreateMerchantForm = () => {
 
   const handleNext = () => {
     if (step === 1) {
-      setForm((p) => ({ ...p, mer_id: generateMerchantId() }));
+      setForm((p) => ({ ...p, mer_id: generateMerchantId(p) }));
     }
     if (step < steps.length - 1) setStep((s) => s + 1);
   };
@@ -304,16 +315,38 @@ const CreateMerchantForm = () => {
           </div>
           <div className="col-md-4 mb-3">
             <Form.Label>Account Number</Form.Label>
-            <Form.Control
-              type="text"
-              name="mer_account"
-              value={form.mer_account}
-              onChange={handleChange}
-              onBlur={fetchAccount}
-              placeholder="Enter account number"
-              style={{ border: "1px solid #005580" }}
-            />
+            <div className="input-group">
+              <Form.Control
+                type="text"
+                name="mer_account"
+                value={form.mer_account}
+                onChange={handleChange}
+                placeholder="Enter account number"
+                style={{ border: "1px solid #005580" }}
+              />
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={fetchAccount}
+                style={{
+                  border: "1px solid #005580",
+                  backgroundColor: "#005580",
+                  marginLeft: "20px",
+                }}
+              >
+                Search
+              </button>
+            </div>
+            {accountError && (
+              <div
+                className="text-danger mt-1"
+                style={{ fontSize: "0.875rem" }}
+              >
+                {accountError}
+              </div>
+            )}
           </div>
+
           <div className="col-md-4 mb-3">
             <Form.Label>Currency</Form.Label>
             <Form.Control
@@ -354,9 +387,7 @@ const CreateMerchantForm = () => {
                   )
                 }
                 onChange={handleMccChange}
-                renderInput={(params) => (
-                  <TextField {...params} label="" />
-                )}
+                renderInput={(params) => <TextField {...params} label="" />}
                 isOptionEqualToValue={(option, value) =>
                   option.MAC_IDEN === value.MAC_IDEN
                 }
