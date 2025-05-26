@@ -6,6 +6,10 @@ import "../../../assets/css/style.css";
 import { grcodeapi } from "../../../services/qrcodeApi";
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
+import { toast } from "react-toastify";
+import { escapeSelector } from "jquery";
+import { useNavigate } from "react-router-dom";
+import { useHistory } from "react-router-dom"; // At the top of your component
 const steps = ["Branch & Account", "Merchant Details", "Summary"];
 const percentages = [33, 66, 100];
 
@@ -38,6 +42,15 @@ const CreateMerchantForm = () => {
   const [currencyError, setCurrencyError] = useState("");
   const [ownerNameError, setOwnerNameError] = useState("");
   const [categoryCodeError, setCategoryCodeError] = useState("");
+  const [businessNameError, setBusinessNameError] = useState("");
+  const [cityError, setCityError] = useState("");
+  const [locationError, setLocationError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [emailError, setEmailError] = useState("");
+
+  const [creationDateError, setCreationDateError] = useState("");
+  const history = useHistory();
+  // const navigate = useNavigate();
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -212,28 +225,91 @@ const CreateMerchantForm = () => {
           mer_owner_name: "",
         }));
         hasError = true;
+      } else {
+        setAccountError("");
       }
 
       if (!form.mer_currency) {
         setCurrencyError("❌ Currency is required");
         setTimeout(() => setCurrencyError(""), 3000);
         hasError = true;
+      } else {
+        setCurrencyError("");
       }
 
       if (!form.mer_owner_name) {
         setOwnerNameError("❌ Owner name is required");
         setTimeout(() => setOwnerNameError(""), 3000);
         hasError = true;
+      } else {
+        setOwnerNameError("");
       }
 
       if (!form.mer_catagory_code) {
         setCategoryCodeError("❌ Please select a category code");
         setTimeout(() => setCategoryCodeError(""), 3000);
         hasError = true;
+      } else {
+        setCategoryCodeError("");
       }
 
       if (hasError) return;
 
+      setStep((s) => s + 1);
+    } else if (step === 1) {
+      let hasError = false;
+
+      if (!form.mer_business_name) {
+        setBusinessNameError("❌ Business name is required");
+        setTimeout(() => setBusinessNameError(""), 3000);
+        hasError = true;
+      } else {
+        setBusinessNameError("");
+      }
+
+      if (!form.mer_city) {
+        setCityError("❌ City is required");
+        setTimeout(() => setCityError(""), 3000);
+        hasError = true;
+      } else {
+        setCityError("");
+      }
+
+      if (!form.mer_location) {
+        setLocationError("❌ Location is required");
+        setTimeout(() => setLocationError(""), 3000);
+        hasError = true;
+      } else {
+        setLocationError("");
+      }
+
+      if (!form.mer_phone) {
+        setPhoneError("❌ Phone number is required");
+        setTimeout(() => setPhoneError(""), 3000);
+        hasError = true;
+      } else {
+        setPhoneError("");
+      }
+
+      // if (!form.mer_email.includes("@")) {
+      //   setEmailError("Invalid email format");
+      // } else {
+      //   const regex = /^\S+@\S+\.\S+$/;
+      //   if (!regex.test(form.mer_email)) {
+      //     setEmailError("Invalid email format");
+      //     hasError = true;
+      //   } else {
+      //     setEmailError("");
+      //   }
+      // }
+
+      if (!form.mer_creation_date) {
+        setCreationDateError("❌ Creation date is required");
+        setTimeout(() => setCreationDateError(""), 3000);
+        hasError = true;
+      }
+
+      if (hasError) return;
       setStep((s) => s + 1);
     }
   };
@@ -276,10 +352,29 @@ const CreateMerchantForm = () => {
 
   const handleSubmit = async () => {
     try {
-      await axios.post("/api/merchant/createMerchant", form);
-      alert("Merchant created successfully");
-    } catch {
-      alert("Error creating merchant");
+      const response = await axios.post(
+        "http://localhost:8089/api/createMerchant",
+        form
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        toast.success("✅ Merchant created successfully");
+        setTimeout(() => {
+          history.push("/View_Branch_merchants"); // Adjust the route as needed
+        }, 1000);
+      } else if (response.status === 400) {
+      } else {
+        toast.error("⚠️ Failed to create merchant. Please try again.");
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 409) {
+        toast.error("❌ Account number already exists.");
+      } else {
+        console.error("Error creating merchant:", error);
+        toast.error(
+          "❌ Error creating merchant. Please check the console for details."
+        );
+      }
     }
   };
 
@@ -490,6 +585,14 @@ const CreateMerchantForm = () => {
                   placeholder="Enter business name"
                   style={{ border: "1px solid #005580" }}
                 />
+                {businessNameError && (
+                  <div
+                    className="text-danger mt-1"
+                    style={{ fontSize: "0.875rem" }}
+                  >
+                    {businessNameError}
+                  </div>
+                )}
               </div>
               <div className="col-md-4 mb-3">
                 <Form.Label>City</Form.Label>
@@ -500,6 +603,14 @@ const CreateMerchantForm = () => {
                   placeholder="Enter city"
                   style={{ border: "1px solid #005580" }}
                 />
+                {cityError && (
+                  <div
+                    className="text-danger mt-1"
+                    style={{ fontSize: "0.875rem" }}
+                  >
+                    {cityError}
+                  </div>
+                )}
               </div>
               <div className="col-md-4 mb-3">
                 <Form.Label>Location</Form.Label>
@@ -510,6 +621,14 @@ const CreateMerchantForm = () => {
                   placeholder="Enter location"
                   style={{ border: "1px solid #005580" }}
                 />
+                {locationError && (
+                  <div
+                    className="text-danger mt-1"
+                    style={{ fontSize: "0.875rem" }}
+                  >
+                    {locationError}
+                  </div>
+                )}
               </div>
               <div className="col-md-4 mb-3">
                 <Form.Label>Phone</Form.Label>
@@ -520,6 +639,14 @@ const CreateMerchantForm = () => {
                   placeholder="Enter phone"
                   style={{ border: "1px solid #005580" }}
                 />
+                {phoneError && (
+                  <div
+                    className="text-danger mt-1"
+                    style={{ fontSize: "0.875rem" }}
+                  >
+                    {phoneError}
+                  </div>
+                )}
               </div>
               <div className="col-md-4 mb-3">
                 <Form.Label>Email</Form.Label>
@@ -530,6 +657,14 @@ const CreateMerchantForm = () => {
                   placeholder="Enter email"
                   style={{ border: "1px solid #005580" }}
                 />
+                {/* {emailError && (
+                  <div
+                    className="text-danger mt-1"
+                    style={{ fontSize: "0.875rem" }}
+                  >
+                    {emailError}
+                  </div>
+                )} */}
               </div>
               <div className="col-md-4 mb-3">
                 <Form.Label>Creation Date</Form.Label>
@@ -540,6 +675,14 @@ const CreateMerchantForm = () => {
                   onChange={handleChange}
                   style={{ border: "1px solid #005580" }}
                 />
+                {creationDateError && (
+                  <div
+                    className="text-danger mt-1"
+                    style={{ fontSize: "0.875rem" }}
+                  >
+                    {creationDateError}
+                  </div>
+                )}
               </div>
             </div>
 
