@@ -1,212 +1,241 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Accordion, Button } from "react-bootstrap";
 import Scrollbar from "smooth-scrollbar";
-import { connect } from "react-redux";
-import { getDarkMode } from "../../../../store/mode";
-import { currentUser } from "../../../../Utils/tokenUtils";
-import { isAllowedBarances } from "../../../../Utils/constants";
-//img
 import logo from "../../../../../src/assets/images/abay_logo.png";
 
-function mapStateToProps(state) {
-  return {
-    darkMode: getDarkMode(state),
-  };
-}
-
-const minisidbar = () => {
-  document.body.classList.toggle("sidebar-main");
-};
-
-const SidebarStyle = (props) => {
-  //location
-  let location = useLocation();
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const sidebar = urlParams.get("sidebar");
-  var variant = "";
-  if (sidebar !== null) {
-    variant = "";
-    switch (sidebar) {
-      case "0":
-        variant = "sidebar-dark";
-        break;
-      case "1":
-        variant = "sidebar-light";
-        break;
-      default:
-        variant = "";
-        break;
-    }
-  }
+const SidebarStyle = () => {
+  const location = useLocation();
+  const [activeSubMenu, setActiveSubMenu] = useState({});
 
   useEffect(() => {
     const scrollbarInstance = Scrollbar.init(
       document.querySelector("#my-scrollbar")
     );
-
-    // Cleanup on unmount
     return () => {
       scrollbarInstance.destroy();
     };
   }, []);
-  const exists = isAllowedBarances();
+
+  const toggleSubMenu = (menu) => {
+    setActiveSubMenu((prev) => ({
+      ...prev,
+      [menu]: !prev[menu],
+    }));
+  };
+
   return (
-    <>
-      <div
-        className={`iq-sidebar sidebar-default ${variant} col-md-4`}
-        style={{ backgroundColor: "#005580" }}
-      >
-        <div className="iq-sidebar-logo d-flex align-items-end justify-content-between">
-          <Link to="/" className="header-logo">
-            <img
-              src={logo}
-              className={`img-fluid rounded-normal light-logo ${
-                props.darkMode ? "d-none" : ""
-              }`}
-              alt="logo"
-            />
-            <span>QRCG</span>
-          </Link>
-          <div className="side-menu-bt-sidebar-1">
-            <svg
-              onClick={minisidbar}
-              xmlns="http://www.w3.org/2000/svg"
-              className="text-light wrapper-menu"
-              width="30"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </div>
-        </div>
-        <div className="data-scrollbar" data-scroll="1" id="my-scrollbar">
-          <nav className="iq-sidebar-menu">
-            <Accordion as="ul" id="iq-sidebar-toggle" className="side-menu">
-              <li className="px-3 pt-3 pb-2 ">
-                <span className="text-uppercase small font-weight-bold">
-                  Application
-                </span>
-              </li>
-
-              {/* <li
-                className={`${
-                  location.pathname === "/View_Branch_merchants" ? "active" : ""
-                }  sidebar-layout`}
-              >
-                <Link to="/View_Branch_merchants" className="svg-icon">
-                  <i className="">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="30"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                      />
-                    </svg>
-                  </i>
-                  <span className="ml-2">Merchants</span>
-                </Link>
-              </li> */}
-              <li
-                className={`${
-                  location.pathname === "/create_merchant" ? "active" : ""
-                }  sidebar-layout`}
-              >
-                <Link to="/create_merchant" className="svg-icon">
-                  <i className="">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="30"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                      />
-                    </svg>
-                  </i>
-                  <span className="ml-2">create Merchant</span>
-                </Link>
-              </li>
-
-              <li
-                className={`${
-                  location.pathname === "/product" ? "active" : ""
-                }  sidebar-layout`}
-              >
-                <Link to="/product" className="svg-icon">
-                  <i className="">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                      />
-                    </svg>
-                  </i>
-                  <span className="ml-2">Generate QR</span>
-                </Link>
-              </li>
-              {exists && (
-                <li
-                  className={`${
-                    location.pathname === "/Branch_performance" ? "active" : ""
-                  }  sidebar-layout`}
-                >
-                  <Link to="/Branch_performance" className="svg-icon">
-                    <i className="">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="18"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                        />
-                      </svg>
-                    </i>
-                    <span className="ml-2">Branch Performance</span>
-                  </Link>
-                </li>
-              )}
-            </Accordion>
-          </nav>
-          <div className="pt-5 pb-5"></div>
-        </div>
+    <div
+      className="iq-sidebar sidebar-default col-md-4"
+      style={{ backgroundColor: "#005580" }}
+    >
+      <div className="iq-sidebar-logo d-flex align-items-end justify-content-between">
+        <Link to="/" className="header-logo">
+          <img
+            src={logo}
+            className="img-fluid rounded-normal light-logo"
+            alt="logo"
+          />
+          <span>QRCG</span>
+        </Link>
       </div>
-    </>
+
+      <div className="data-scrollbar" data-scroll="1" id="my-scrollbar">
+        <nav className="iq-sidebar-menu">
+          <ul className="side-menu list-unstyled">
+            {/* Main Menu Title */}
+            <li className="px-3 pt-3 pb-2">
+              <span className="text-uppercase small font-weight-bold text-white">
+                Main Menu
+              </span>
+            </li>
+
+            {/* Merchants Section */}
+            <li>
+              <div
+                onClick={() => toggleSubMenu("merchants")}
+                className="text-white cursor-pointer d-flex justify-content-between align-items-center px-3 py-2"
+              >
+                <span className="d-flex align-items-center">
+                  <svg
+                    className="mr-2"
+                    width="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+                  </svg>
+                  Merchants
+                </span>
+                <svg
+                  width="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+              {activeSubMenu["merchants"] && (
+                <ul className="pl-4">
+                  <li
+                    className={`${
+                      location.pathname === "/create_merchant" ? "active" : ""
+                    }`}
+                  >
+                    <Link
+                      to="/create_merchant"
+                      className="text-white d-flex align-items-center"
+                    >
+                      <svg
+                        className="mr-2"
+                        width="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                      Create Merchant
+                    </Link>
+                  </li>
+                  <li
+                    className={`${
+                      location.pathname === "/view_merchant" ? "active" : ""
+                    }`}
+                  >
+                    <Link
+                      to="/view_merchant"
+                      className="text-white d-flex align-items-center"
+                    >
+                      <svg
+                        className="mr-2"
+                        width="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 4h18v16H3z" />
+                        <path d="M8 9h8v6H8z" />
+                      </svg>
+                      View Merchant
+                    </Link>
+                  </li>
+                </ul>
+              )}
+            </li>
+
+            {/* QR Generation Section */}
+            <li className="mt-2">
+              <div
+                onClick={() => toggleSubMenu("qr")}
+                className="text-white cursor-pointer d-flex justify-content-between align-items-center px-3 py-2"
+              >
+                <span className="d-flex align-items-center">
+                  <svg
+                    className="mr-2"
+                    width="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
+                  </svg>
+                  QR Generation
+                </span>
+                <svg
+                  width="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+              {activeSubMenu["qr"] && (
+                <ul className="pl-4">
+                  <li
+                    className={`${
+                      location.pathname === "/product" ? "active" : ""
+                    }`}
+                  >
+                    <Link
+                      to="/product"
+                      className="text-white d-flex align-items-center"
+                    >
+                      <svg
+                        className="mr-2"
+                        width="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                      Generate QR
+                    </Link>
+                  </li>
+                  <li
+                    className={`${
+                      location.pathname === "/view_qr" ? "active" : ""
+                    }`}
+                  >
+                    <Link
+                      to="/view_qr"
+                      className="text-white d-flex align-items-center"
+                    >
+                      <svg
+                        className="mr-2"
+                        width="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect
+                          x="3"
+                          y="3"
+                          width="18"
+                          height="18"
+                          rx="2"
+                          ry="2"
+                        />
+                        <path d="M9 9h6v6H9z" />
+                      </svg>
+                      View Generated QR
+                    </Link>
+                  </li>
+                </ul>
+              )}
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
   );
 };
 
-export default connect(mapStateToProps)(SidebarStyle);
+export default SidebarStyle;

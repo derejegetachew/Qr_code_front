@@ -360,7 +360,7 @@ const CreateMerchantForm = () => {
       if (response.status === 200 || response.status === 201) {
         toast.success("✅ Merchant created successfully");
         setTimeout(() => {
-          history.push("/View_Branch_merchants"); // Adjust the route as needed
+          history.push("/view_merchant"); // Adjust the route as needed
         }, 1000);
       } else if (response.status === 400) {
       } else {

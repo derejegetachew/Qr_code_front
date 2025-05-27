@@ -236,7 +236,7 @@ const Products = () => {
 
       console.log("account number list", account_list);
       const response = await axios.post(
-        "http://10.1.85.10:8089/api/merchant",
+        "http://localhost:8089/api/merchant",
         account_list
       );
       if (response.data) {
