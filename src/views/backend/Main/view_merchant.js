@@ -2,8 +2,7 @@ import "../../../assets/css/ViewAllMerchant.css";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Table, Container, Form, ListGroup, Button } from "react-bootstrap";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import ReactPaginate from "react-paginate";
 import { currentUser } from "../../../Utils/tokenUtils";
@@ -13,22 +12,18 @@ const ViewAllMerchant = () => {
   const [merchants, setMerchants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 30;
+  const itemsPerPage = 10;
 
-  const [tempSearchBranch, setTempSearchBranch] = useState("");
-  const [tempStartDate, setTempStartDate] = useState(null);
-  const [tempEndDate, setTempEndDate] = useState(null);
-
-  const [searchBranch, setSearchBranch] = useState("");
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  const [tempSearchName, setTempSearchName] = useState("");
+  const [searchName, setSearchName] = useState("");
 
   useEffect(() => {
     const fetchMerchants = async () => {
       try {
-        const response = await axios.get("http://localhost/api/getAllMerchant");
-        setMerchants(response.data.data || []);
-        console.log("the responseeesssss=========================>", response);
+        const response = await axios.get(
+          "http://localhost:8089/api/getAllMerchant"
+        );
+        setMerchants(response.data.data);
       } catch (error) {
         console.error("Error fetching merchants:", error);
       } finally {
@@ -40,25 +35,18 @@ const ViewAllMerchant = () => {
   }, []);
 
   const formatDate = (date) =>
-    date ? format(new Date(date), "yyyy-MM-dd") : null;
+    date ? format(new Date(date), "yyyy-MM-dd") : "N/A";
 
   const handleSearch = () => {
-    setSearchBranch(tempSearchBranch);
-    setStartDate(tempStartDate);
-    setEndDate(tempEndDate);
+    setSearchName(tempSearchName);
+    setCurrentPage(0); // Reset to first page on new search
   };
 
   const filteredMerchants = merchants.filter((merchant) => {
-    const createdAt = formatDate(merchant.mer_creation_date);
-    const matchesBranch = merchant.mer_branch_name
+    const matchesName = merchant.mer_owner_name
       ?.toLowerCase()
-      .includes(searchBranch.toLowerCase());
-    const matchesDateRange =
-      startDate && endDate
-        ? createdAt >= formatDate(startDate) && createdAt <= formatDate(endDate)
-        : true;
-
-    return matchesBranch && matchesDateRange;
+      .includes(searchName.toLowerCase());
+    return matchesName;
   });
 
   const offset = currentPage * itemsPerPage;
@@ -73,55 +61,63 @@ const ViewAllMerchant = () => {
     <Container className="mt-2">
       <h6 className="text-center">Total Merchants: {merchants.length}</h6>
 
-      <div className="d-flex flex-wrap gap-4">
-        <Form.Group className="col-md-3">
+      <div className="d-flex align-items-center mb-2">
+        <Form.Group
+          className="me-2 mb-0"
+          style={{ flexGrow: 1, maxWidth: "300px" }}
+        >
           <Form.Control
             type="text"
-            placeholder="Search by branch..."
-            value={tempSearchBranch}
-            onChange={(e) => setTempSearchBranch(e.target.value)}
+            placeholder="Search by owner name..."
+            value={tempSearchName}
+            onChange={(e) => setTempSearchName(e.target.value)}
             className="search-input"
             style={{ border: "1px solid #005580" }}
           />
         </Form.Group>
 
-        <Form.Group className="col-md-3">
-          <DatePicker
-            selected={tempStartDate}
-            onChange={(date) => setTempStartDate(date)}
-            placeholderText="Start Date"
-            className="date-picker-custom form-control"
-            dateFormat="yyyy-MM-dd"
-          />
-        </Form.Group>
-
-        <Form.Group className="col-md-3">
-          <DatePicker
-            selected={tempEndDate}
-            onChange={(date) => setTempEndDate(date)}
-            placeholderText="End Date"
-            className="date-picker-custom form-control"
-            dateFormat="yyyy-MM-dd"
-          />
-        </Form.Group>
-
-        <Button className="button1" onClick={handleSearch}>
+        <Button
+          className="btn btn-success"
+          onClick={handleSearch}
+          style={{
+            whiteSpace: "nowrap",
+            border: "1px solid #005580",
+            backgroundColor: "#005580",
+            marginLeft: "10px",
+          }}
+        >
           Search
         </Button>
+
+        <Link to="/create_merchant">
+          <Button
+            className="btn btn-success"
+            style={{
+              whiteSpace: "nowrap",
+              border: "1px solid #005580",
+              backgroundColor: "#228B22",
+              marginLeft: "580px",
+              marginTop: "-100px",
+              marginBottom: "-50px",
+              paddingLeft: "20px",
+              marginRight: "20px",
+            }}
+          >
+            Add Merchant
+          </Button>
+        </Link>
       </div>
 
-      {searchBranch && (
+      {/* {searchName && (
         <ListGroup horizontal className="mb-3">
           <ListGroup.Item className="branch-count">
-            {searchBranch}: {filteredMerchants.length} merchants
+            Results for "{searchName}": {filteredMerchants.length} merchants
           </ListGroup.Item>
         </ListGroup>
-      )}
+      )} */}
 
       {loading ? (
         <p className="text-center">Loading merchants...</p>
-      ) : filteredMerchants.length === 0 ? (
-        <p className="text-center">No matching merchants found</p>
       ) : (
         <>
           <div className="table-container">
@@ -129,7 +125,7 @@ const ViewAllMerchant = () => {
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>ID</th>
+                  <th>Merchant_ID</th>
                   <th>Owner Name</th>
                   <th>Business Name</th>
                   <th>Account</th>
@@ -139,38 +135,54 @@ const ViewAllMerchant = () => {
                   <th>Branch</th>
                   <th>Category Code</th>
                   <th>Created At</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {currentItems.map((merchant, index) => (
-                  <tr key={merchant.mer_id || index}>
-                    <td>{offset + index + 1}</td>
-                    <td>{merchant.mer_id || "N/A"}</td>
-                    <td>{merchant.mer_owner_name || "N/A"}</td>
-                    <td>{merchant.mer_business_name || "N/A"}</td>
-                    <td>{merchant.mer_account || "N/A"}</td>
-                    <td>{merchant.mer_phone || "N/A"}</td>
-                    <td>{merchant.mer_email || "N/A"}</td>
-                    <td>{merchant.mer_city || "N/A"}</td>
-                    <td>{merchant.mer_branch_name || "N/A"}</td>
-                    <td>{merchant.mer_catagory_code || "N/A"}</td>
-                    <td>{formatDate(merchant.mer_creation_date) || "N/A"}</td>
+                {filteredMerchants.length === 0 ? (
+                  <tr>
+                    <td colSpan="12" className="text-center">
+                      No matching merchants found
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  currentItems.map((merchant, index) => (
+                    <tr key={merchant.mer_id || index}>
+                      <td>{offset + index + 1}</td>
+                      <td>{merchant.mer_id || "N/A"}</td>
+                      <td>{merchant.mer_owner_name || "N/A"}</td>
+                      <td>{merchant.mer_business_name || "N/A"}</td>
+                      <td>{merchant.mer_account || "N/A"}</td>
+                      <td>{merchant.mer_phone || "N/A"}</td>
+                      <td>{merchant.mer_email || "N/A"}</td>
+                      <td>{merchant.mer_city || "N/A"}</td>
+                      <td>{merchant.mer_branch_name || "N/A"}</td>
+                      <td>{merchant.mer_catagory_code || "N/A"}</td>
+                      <td>{formatDate(merchant.mer_creation_date)}</td>
+                      <td>
+                        <Button variant="warning" size="sm" className="me-2">
+                          Edit
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </Table>
           </div>
-          <ReactPaginate
-            previousLabel={"← Previous"}
-            nextLabel={"Next →"}
-            breakLabel={"..."}
-            pageCount={pageCount}
-            marginPagesDisplayed={2}
-            pageRangeDisplayed={3}
-            onPageChange={handlePageClick}
-            containerClassName={"pagination"}
-            activeClassName={"active"}
-          />
+          {filteredMerchants.length > 0 && (
+            <ReactPaginate
+              previousLabel={"← Previous"}
+              nextLabel={"Next →"}
+              breakLabel={"..."}
+              pageCount={pageCount}
+              marginPagesDisplayed={2}
+              pageRangeDisplayed={3}
+              onPageChange={handlePageClick}
+              containerClassName={"pagination"}
+              activeClassName={"active"}
+            />
+          )}
         </>
       )}
     </Container>

@@ -79,7 +79,7 @@ const SignIn = () => {
         return;
       }
       // Redirect to the product page after successful login
-      history.push("/View_Branch_merchants");
+      history.push("/View_merchant");
     } catch (error) {
       let message =
         error.response?.data?.message ||
