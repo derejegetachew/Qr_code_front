@@ -6,13 +6,14 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import ReactPaginate from "react-paginate";
 import { currentUser } from "../../../Utils/tokenUtils";
+import { BASE_URL } from "../../../Utils/constants";
 
 const ViewAllMerchant = () => {
   const user = currentUser();
   const [merchants, setMerchants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 10;
+  const itemsPerPage = 6;
 
   const [tempSearchName, setTempSearchName] = useState("");
   const [searchName, setSearchName] = useState("");
@@ -20,9 +21,7 @@ const ViewAllMerchant = () => {
   useEffect(() => {
     const fetchMerchants = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:8089/api/getAllMerchant"
-        );
+        const response = await axios.get(`${BASE_URL}/getAllMerchant`);
         setMerchants(response.data.data);
       } catch (error) {
         console.error("Error fetching merchants:", error);
@@ -160,8 +159,8 @@ const ViewAllMerchant = () => {
                       <td>{merchant.mer_catagory_code || "N/A"}</td>
                       <td>{formatDate(merchant.mer_creation_date)}</td>
                       <td>
-                        <Button variant="warning" size="sm" className="me-2">
-                          Edit
+                        <Button variant="danger" size="sm" className="me-2">
+                          Delete
                         </Button>
                       </td>
                     </tr>

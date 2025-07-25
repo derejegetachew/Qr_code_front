@@ -7,13 +7,14 @@ import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns"; // Date formatting
 import ReactPaginate from "react-paginate";
 import { currentUser } from "../../../Utils/tokenUtils";
+import {BASE_URL} from "../../../Utils/constants";
 const ViewAllMerchant = () => {
   const user = currentUser();
   console.log(user.branch_id);
   const [merchants, setMerchants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 30; // Number of items per page
+  const itemsPerPage = 5; // Number of items per page
   // Temporary search values before applying filter
   const [tempSearchBranch, setTempSearchBranch] = useState("");
   //   const [tempSearchDate, setTempSearchDate] = useState(null);
@@ -30,7 +31,7 @@ const ViewAllMerchant = () => {
     const fetchMerchants = async () => {
       try {
         const response = await axios.get(
-          "http://10.1.85.10:8089/api/getMerchant"
+          `${BASE_URL}/getMerchant`
         );
         setMerchants(response.data.data);
       } catch (error) {

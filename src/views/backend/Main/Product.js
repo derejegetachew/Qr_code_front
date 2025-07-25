@@ -17,7 +17,7 @@ import log from "../../../middleware/logger";
 import { info, error, warn } from "../../../middleware/logger";
 import saveMerchantData from "./registerData";
 import { currentUser } from "../../../Utils/tokenUtils";
-
+import { BASE_URL } from "../../../Utils/constants";
 const Products = () => {
   const [accountNumber, setAccountNumber] = useState("");
   const [merchantData, setMerchantData] = useState([]);
@@ -235,10 +235,7 @@ const Products = () => {
       const account_list = { accountNumbers: accountNumbers };
 
       console.log("account number list", account_list);
-      const response = await axios.post(
-        "http://localhost:8089/api/merchant",
-        account_list
-      );
+      const response = await axios.post(`${BASE_URL}/merchant`, account_list);
       if (response.data) {
         const responseData = response.data;
         const successfulResponses = responseData.filter(

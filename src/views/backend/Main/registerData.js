@@ -1,6 +1,7 @@
+import { BASE_URL } from "../../../Utils/constants";
 const saveMerchantData = async (data) => {
   try {
-    const response = await fetch("http://localhost:8089/api/save", {
+    const response = await fetch(`${BASE_URL}/save`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

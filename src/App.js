@@ -6,6 +6,7 @@ import Branch_performance from "./views/backend/Main/Branch_performance";
 import View_Branch_merchants from "./views/backend/Main/View_Branch_merchants";
 import CreateMerchantForm from "./views/backend/Main/create_merchant";
 import view_merchant from "./views/backend/Main/view_merchant";
+import view_qr from "./views/backend/Main/View_qr";
 import ProtectedRoute from "./middleware/protected"; // Import ProtectedRoute
 import "./assets/scss/backend.scss";
 import "./assets/css/custom.css";
@@ -42,6 +43,7 @@ function App() {
                 component={CreateMerchantForm}
               />
               <ProtectedRoute path="/view_merchant" component={view_merchant} />
+              <ProtectedRoute path="/view_qr" component={view_qr} />
               <ProtectedRoute
                 path="/View_Branch_merchants"
                 component={View_Branch_merchants}
