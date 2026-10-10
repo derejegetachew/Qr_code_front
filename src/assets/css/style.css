@@ -67,3 +67,16 @@
 .step.current {
   color: #333;
 }
+.table-container {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.custom-table td,
+.custom-table th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+}
+

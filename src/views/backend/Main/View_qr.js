@@ -5,8 +5,9 @@ import { Table, Container, Form, Button } from "react-bootstrap";
 import { format } from "date-fns";
 import ReactPaginate from "react-paginate";
 import { currentUser } from "../../../Utils/tokenUtils";
-import {BASE_URL} from "../../../Utils/constants";  
-
+import { BASE_URL } from "../../../Utils/constants";
+import { toast } from "react-toastify";
+import "../../../assets/css/ViewAllMerchant.css";
 const ViewAllMerchant = () => {
   const user = currentUser();
   const [merchants, setMerchants] = useState([]);
@@ -20,9 +21,7 @@ const ViewAllMerchant = () => {
   useEffect(() => {
     const fetchMerchants = async () => {
       try {
-        const response = await axios.get(
-          `${BASE_URL}/getallMerchantQr`
-        );
+        const response = await axios.get(`${BASE_URL}/getallMerchantQr`);
 
         console.log("Fetched merchant data:", response.data);
 
@@ -53,7 +52,7 @@ const ViewAllMerchant = () => {
   };
 
   const filteredMerchants = merchants.filter((merchant) => {
-    const name = merchant.name || merchant.mer_owner_name || "";
+    const name = merchant.MER_ACCOUNT || "";
     return name.toLowerCase().includes(searchName.toLowerCase());
   });
 
@@ -64,12 +63,42 @@ const ViewAllMerchant = () => {
   const handlePageClick = ({ selected }) => {
     setCurrentPage(selected);
   };
+  const handleToggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 1 ? 0 : 1;
+
+    const confirmMsg =
+      newStatus === 1
+        ? "Are you sure you want to enable this merchant?"
+        : "Are you sure you want to disable this merchant?";
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await axios.put(`${BASE_URL}/updateqrgenerateStatus/${id}`, {
+        status: newStatus,
+      });
+
+      toast.success(
+        `Merchant ${newStatus === 1 ? "enabled" : "disabled"} successfully`
+      );
+
+      // ✅ Update UI
+      setMerchants((prevMerchants) =>
+        prevMerchants.map((merchant) =>
+          merchant.id === id ? { ...merchant, status: newStatus } : merchant
+        )
+      );
+    } catch (error) {
+      toast.error("Failed to update merchant status");
+      console.error("Toggle status error:", error);
+    }
+  };
 
   return (
     <Container className="mt-2">
-      <h6 className="text-center">
+      {/* <h6 className="text-center">
         Total generated QR codes: {merchants.length}
-      </h6>
+      </h6> */}
 
       <div className="d-flex align-items-center mb-2">
         <Form.Group
@@ -98,6 +127,9 @@ const ViewAllMerchant = () => {
         >
           Search
         </Button>
+        <h6 className="text-center" style={{ marginLeft: "50px" }}>
+          {/* Total generated QR codes: {merchants.length} */}
+        </h6>
       </div>
 
       {loading ? (
@@ -114,10 +146,13 @@ const ViewAllMerchant = () => {
                   <th>Business Name</th>
                   <th>Account No</th>
                   <th>Phone No</th>
-                  <th>City</th>
-                  <th>Branch</th>
-                  <th>Created By</th>
+                  {/* <th>City</th> */}
+                  <th>Maker Branch</th>
+                  <th>Maker Branch_code</th>
+                  <th>Maker UserName</th>
+                  <th>Maker Name</th>
                   <th>Created At</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -129,19 +164,31 @@ const ViewAllMerchant = () => {
                   </tr>
                 ) : (
                   currentItems.map((merchant, index) => (
-                    <tr key={merchant.MER_IDEN || index}>
+                    <tr key={merchant.ID || index}>
                       <td>{offset + index + 1}</td>
                       <td>{merchant.MER_IDEN || "N/A"}</td>
                       <td>{merchant.MER_CODE || "N/A"}</td>
-                      <td>
-                        {merchant.name || merchant.mer_owner_name || "N/A"}
-                      </td>
+                      <td>{merchant.NAME || "N/A"}</td>
                       <td>{merchant.ACC_NUMB || "N/A"}</td>
                       <td>{merchant.MOBILE_NUMBER || "N/A"}</td>
-                      <td>{merchant.CITY || "N/A"}</td>
-                      <td>{merchant.branch || "N/A"}</td>
-                      <td>{merchant.createdBy || "N/A"}</td>
-                      <td>{formatDate(merchant.createdAt)}</td>
+                      {/* <td>{merchant.CITY || "N/A"}</td> */}
+                      <td>{merchant.BRANCH || "N/A"}</td>
+                      <td>{merchant.MAKER_BRANCH_CODE || "N/A"}</td>
+                      <td>{merchant.MAKER_USER_NAME || "N/A"}</td>
+                      <td>{merchant.CREATEDBY || "N/A"}</td>
+                      <td>{formatDate(merchant.CREATED_AT)}</td>
+                      <td>
+                        <Button
+                          size="sm"
+                          className="me-2"
+                          variant={merchant.status == 0 ? "danger" : "success"}
+                          onClick={() =>
+                            handleToggleStatus(merchant.id, merchant.status)
+                          }
+                        >
+                          {merchant.status == 0 ? "Disabled" : "Enabled"}
+                        </Button>
+                      </td>
                     </tr>
                   ))
                 )}

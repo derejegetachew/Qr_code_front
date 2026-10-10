@@ -89,7 +89,7 @@ const ViewAllMerchant = () => {
       {/* <h5 className="text-center my-4">All Merchant Data</h5> */}
 
       {/* Total Merchants Count */}
-      <h6 className="text-center">Total Merchants: {totalMerchantsCount}</h6>
+      {/* <h6 className="text-center">Total Merchants: {totalMerchantsCount}</h6> */}
 
       {/* Search Fields */}
       <div className="d-flex flex-wrap gap-4">

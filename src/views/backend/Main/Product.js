@@ -46,6 +46,8 @@ const Products = () => {
   const user_id = user ? user.userid : "Unknown user_id";
   const branch_id = user ? user.branch_id : "Unknown branch_id:";
   const branch = user ? user.branch : "unknown branch";
+  const username = user ? user.username : "Unknown Username";
+  const branch_code = user ? user.branch_code : "Unknown Branch Code";
   const handleError = (message) => {
     setError(message);
     setTimeout(() => {
@@ -76,7 +78,7 @@ const Products = () => {
 
         const qrFields = [
           { id: "00", value: "01" },
-          { id: "01", value: "12" },
+          { id: "01", value: "11" },
           {
             id: "28",
             value: Object.entries(merchant.merchantAccountInfo || {}).map(
@@ -119,6 +121,8 @@ const Products = () => {
         userid: user_id,
         branch_id: branch_id,
         branch: branch,
+        branch_code: branch_code,
+        username: username,
       };
       console.log(QRdata);
       await saveMerchantData(QRdata);
@@ -133,7 +137,10 @@ const Products = () => {
     try {
       for (let i = 0; i < qrCodeData.length; i++) {
         if (qrCodeRef.current[i]) {
-          const image = await toPng(qrCodeRef.current[i]);
+          // Use pixelRatio to increase resolution
+          const image = await toPng(qrCodeRef.current[i], {
+            pixelRatio: 2000 / 400,
+          }); // 400 is your displayed width
           const base64Data = image.split(",")[1];
           const imageName = `${merchantData[i].name || "QRCode"}_${i + 1}.png`;
 
@@ -148,6 +155,7 @@ const Products = () => {
       setError("Failed to download images. Please try again.");
     }
   };
+
   const handleDownloadAllPDF = async () => {
     try {
       const pdf = new jsPDF();
@@ -637,15 +645,16 @@ const Products = () => {
                       <QRCode
                         value={qrString}
                         logoImage="/image/abay-logo.png"
-                        logoWidth={35}
+                        logoWidth={600}
                         bgColor="#FFFFFF"
                         fgColor="#004461"
-                        size={220}
+                        size={3000}
                         level="L"
+                        renderAs="svg"
                         style={{
                           paddingTop: "2px",
-                          width: 350,
-                          height: 350,
+                          width: 400,
+                          height: 400,
                         }}
                       />
                       <br />
