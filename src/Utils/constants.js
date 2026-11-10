@@ -1,6 +1,6 @@
 import { currentUser } from "./tokenUtils";
-export const BASE_URL = "http://localhost:8086/api";
-// export const BASE_URL = "http://10.1.85.10:8086/api";
+ export const BASE_URL = "http://localhost:8086/api";
+//  export const BASE_URL = "http://10.1.85.10:8086/api";
 //  export const BASE_URL = "http://localhost:8089/api";
 export function isAllowedBarances() {
   const user = currentUser();

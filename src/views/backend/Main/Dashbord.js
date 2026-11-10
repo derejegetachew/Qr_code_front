@@ -1,820 +1,1320 @@
-import React from "react";
-// import { Link } from 'react-router-dom'
-import Chart from "react-apexcharts";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Form,
+  Button,
+  Table,
+  Badge,
+  Spinner,
+  Alert,
+} from "react-bootstrap";
+import * as XLSX from "xlsx";
+import axios from "axios";
+import { currentUser } from "../../../Utils/tokenUtils";
+import { BASE_URL } from "../../../Utils/constants";
+import "../../../assets/css/MerchantQrDashboard.css";
 
-//leaflet
-import Leaflet from "../../../components/leaflet";
+const MONTH_NAMES = [
+  "All Months",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
-//datepicker
-import Datepickers from "../../../components/Datepicker";
-
-//circularpro
-import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
-// import "react-circular-progressbar/dist/styles.css";
-import { Card, Container, Row, Col, Dropdown } from "react-bootstrap";
-
-// img
-// import product1 from "../../../assets/images/products/1.jpg";
-// import product2 from "../../../assets/images/products/2.jpg";
-// import product13 from "../../../assets/images/products/13.jpg";
-// import product4 from "../../../assets/images/products/4.jpg";
-// import user1 from "../../../assets/images/user/1.jpg";
-// import user5 from "../../../assets/images/user/5.jpg";
-// import user2 from "../../../assets/images/user/2.jpg";
-// import user3 from "../../../assets/images/user/3.jpg";
-// import sofi from "../../../assets/images/user/sofi.jpg";
 const Dashbord = () => {
-  // const chart1={
-  //      options : {
+  // Authentication & Current User
+  const user = currentUser();
+  const currentUsername = user?.username || user?.id || "unknown";
+  const currentBranch = user?.branch || "unknown";
 
-  //       colors: ['#1f1f7a', '#2e2eb8'],
-  //         chart: {
-  //         fontFamily: 'DM Sans',
-  //         toolbar:{
-  //           show: false,
-  //         },
-  //       },
-  //       dataLabels: {
-  //         enabled: false
-  //       },
-  //       stroke: {
-  //         curve: 'smooth'
-  //       },
-  //       fill: {
-  //         type: 'gradient',
-  //         gradient: {
-  //           shade: 'light',
-  //           type: "vertical",
-  //           shadeIntensity: 0.5,
-  //           // gradientToColors: undefined, // optional, if not defined - uses the shades of same color in series
-  //           inverseColors: false,
-  //           opacityFrom: .8,
-  //           opacityTo: .2,
-  //           stops: [0, 50, 100],
-  //           colorStops: []
-  //         }
-  //       },
-  //       grid: {
-  //         xaxis: {
-  //             lines: {
-  //                 show: false
-  //             }
-  //         },
-  //         yaxis: {
-  //             lines: {
-  //                 show: false
-  //             }
-  //         }
-  //       },
-  //       yaxis: {
-  //         labels: {
-  //         offsetY:0,
-  //         minWidth: 20,
-  //         maxWidth: 20
-  //         },
-  //       },
-  //       xaxis: {
-  //         type: 'datetime',
-  //         labels: {
-  //           minHeight: 20,
-  //           maxHeight: 20
-  //         },
-  //         categories: ["2018-09-19T00:00:00.000Z", "2018-09-19T01:30:00.000Z", "2018-09-19T02:30:00.000Z", "2018-09-19T03:30:00.000Z", "2018-09-19T04:30:00.000Z", "2018-09-19T05:30:00.000Z", "2018-09-19T06:30:00.000Z"]
-  //       },
-  //       tooltip: {
-  //         x: {
-  //           format: 'dd/MM/yy HH:mm'
-  //         },
-  //       },
-  //       },
-  //       series: [{
-  //         name: 'Incomes',
-  //         data: [90, 105, 72, 90, 65, 109, 130]
-  //       }, {
-  //         name: 'Expenses',
-  //         data: [115, 93, 75, 102, 144, 52, 71]
-  //       }]
-  // }
+  const userIsManagerOriginal = Boolean(
+    user?.is_manager ||
+    user?.role?.toLowerCase?.().includes("manager") ||
+    user?.position?.toLowerCase?.().includes("manager") ||
+    user?.Group?.Manager ||
+    user?.Group?.ADMIN ||
+    user?.Group?.QR?.toLowerCase?.().includes("manager")
+  );
 
-  // const chart2={
-  //     options : {
+  // Role toggle: default to manager so all makers can be tested, but allows switching to maker view
+  const [roleMode, setRoleMode] = useState(
+    userIsManagerOriginal ? "manager" : "manager"
+  );
+  const isManager = roleMode === "manager";
 
-  //       colors: ['#b3cccc', '#04237D', '#4d4dff'],
-  //         chart: {
+  // Live Backend Data States
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [rawMerchants, setRawMerchants] = useState([]);
+  const [rawQrs, setRawQrs] = useState([]);
 
-  //         toolbar:{
-  //           show: false,
-  //         },
-  //         sparkline: {
-  //           enabled: true,
-  //         },
-  //         events: {
-  //           click: function(chart, w, e) {
-  //             // console.log(chart, w, e)
-  //           }
-  //         }
-  //       },
-  //       plotOptions: {
-  //         bar: {
-  //           columnWidth: '40%',
-  //           distributed: true,
-  //           borderRadius: 5,
-  //         }
-  //       },
-  //       dataLabels: {
-  //         enabled: false
-  //       },
-  //       legend: {
-  //         show: false
-  //       },
-  //       grid: {
-  //         xaxis: {
-  //             lines: {
-  //                 show: false
-  //             }
-  //         },
-  //         yaxis: {
-  //             lines: {
-  //                 show: false
-  //             }
-  //         }
-  //       },
+  // Active Tab: "makers" (Employee / Maker Performance) vs "details" (Detailed Records)
+  const [activeTab, setActiveTab] = useState("makers");
 
-  //       xaxis: {
-  //         categories: [
-  //           '30 Jan',
-  //           '25 Feb',
-  //           '28 Mar',
-  //         ],
-  //         labels: {
-  //           minHeight: 20,
-  //           maxHeight: 20,
-  //           style: {
-  //             fontSize: '12px'
-  //           }
-  //         }
-  //       }
-  //       },
-  //       series: [{
-  //         data: [55, 42, 19, 30, 20, 65, 21, 23, 45, 60, 30, 20]
-  //       }]
+  // Filter States: Month, Year, Maker Username
+  const currentYearStr = new Date().getFullYear().toString();
+  const [selectedYear, setSelectedYear] = useState(currentYearStr);
+  const [selectedMonth, setSelectedMonth] = useState("All Months");
+  const [selectedMaker, setSelectedMaker] = useState("ALL");
 
-  // }
-  // const chart3={
-  //      options : {
+  // Search & Pagination
+  const [tableSearch, setTableSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  //         chart: {
-  //         height:330,
-  //         type: 'donut',
+  // Keep Maker filter locked if in Maker role
+  useEffect(() => {
+    if (!isManager) {
+      setSelectedMaker(currentUsername);
+    } else {
+      setSelectedMaker("ALL");
+    }
+  }, [isManager, currentUsername]);
 
-  //       },
+  // Fetch Live Data from Backend API
+  const fetchLiveApiData = async () => {
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      const [merchantsRes, qrsRes] = await Promise.all([
+        axios.get(`${BASE_URL}/getAllMerchant`),
+        axios.get(`${BASE_URL}/getallMerchantQr`),
+      ]);
 
-  //       labels: ["Mobile","Electronics", "Laptop", "Others"],
-  //       colors: ['#ffbb33', '#04237D', '#e60000', '#8080ff'],
-  //       plotOptions: {
-  //         pie: {
-  //           startAngle: -90,
-  //           endAngle: 270,
-  //           donut:{
-  //             size: '80%',
-  //             labels:{
-  //               show:true,
-  //               total:{
-  //                 show:true,
-  //                 color: '#BCC1C8',
-  //                 fontSize: '18px',
-  //                 fontFamily: 'DM Sans',
-  //                 fontWeight: 600,
-  //               },
-  //               value: {
-  //                 show: true,
-  //                 fontSize: '25px',
-  //                 fontFamily: 'DM Sans',
-  //                 fontWeight: 700,
-  //                 color: '#8F9FBC',
-  //               },
-  //             }
-  //           }
-  //         }
-  //       },
-  //       dataLabels: {
-  //         enabled: false,
-  //       },
-  //       stroke: {
-  //         lineCap: 'round'
-  //       },
-  //       grid:{
-  //         padding: {
+      const mData =
+        merchantsRes.data?.data ||
+        (Array.isArray(merchantsRes.data) ? merchantsRes.data : []);
+      const qData =
+        qrsRes.data?.data ||
+        (Array.isArray(qrsRes.data) ? qrsRes.data : []);
 
-  //           bottom: 0,
-  //       }
-  //       },
-  //       legend: {
-  //         position: 'bottom',
-  //         offsetY: 8,
-  //         show:true,
-  //       },
-  //       responsive: [{
-  //         breakpoint: 480,
-  //         options: {
-  //           chart: {
-  //             height:268
-  //           }
-  //         }
-  //       }]
-  //       },
-  //       series: [43,58,20,35]
-  // }
+      setRawMerchants(mData);
+      setRawQrs(qData);
+    } catch (err) {
+      console.error("Error fetching live merchant / QR API data:", err);
+      setErrorMsg(
+        err.response?.data?.message ||
+          "Failed to load records from backend API. Please verify the server is running."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveApiData();
+  }, []);
+
+  // Helper to extract maker username from merchant creation records (payload: created_by: user?.username || user?.id || "unknown")
+  const getMerchantMaker = (m) => {
+    return (
+      m.created_by ||
+      m.CREATED_BY ||
+      m.maker_username ||
+      m.MAKER_USER_NAME ||
+      m.username ||
+      "unknown"
+    ).trim();
+  };
+
+  // Helper to extract maker branch from merchant creation records (payload: maker_branch: user?.branch || "unknown")
+  const getMerchantBranch = (m) => {
+    return (
+      m.maker_branch ||
+      m.MAKER_BRANCH ||
+      m.branch ||
+      "unknown"
+    ).trim();
+  };
+
+  // Helper to extract maker username from QR generation records (payload: username: username)
+  const getQrMaker = (q) => {
+    return (
+      q.username ||
+      q.USERNAME ||
+      q.MAKER_USER_NAME ||
+      q.maker_user_name ||
+      q.created_by ||
+      q.CREATED_BY ||
+      "unknown"
+    ).trim();
+  };
+
+  // Helper to extract branch from QR generation records
+  const getQrBranch = (q) => {
+    return (
+      q.branch ||
+      q.BRANCH ||
+      q.maker_branch ||
+      q.MAKER_BRANCH ||
+      q.MAKER_BRANCH_CODE ||
+      "unknown"
+    ).trim();
+  };
+
+  // Date parsing helper
+  const parseRecordDate = (dateVal) => {
+    if (!dateVal) return null;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  };
+
+  const formatDateDisplay = (dateVal) => {
+    const d = parseRecordDate(dateVal);
+    if (!d) return "N/A";
+    return d.toISOString().substring(0, 10);
+  };
+
+  // Match record against selected Year and Month
+  const matchesDateFilter = (dateVal) => {
+    const d = parseRecordDate(dateVal);
+    if (!d) {
+      // If no date is present on the record, include if viewing "All Months"
+      return selectedMonth === "All Months";
+    }
+
+    const rYear = d.getFullYear().toString();
+    if (selectedYear !== "ALL" && rYear !== selectedYear) {
+      return false;
+    }
+
+    if (selectedMonth !== "All Months") {
+      const targetMonthIndex = MONTH_NAMES.indexOf(selectedMonth) - 1; // 0 to 11
+      if (d.getMonth() !== targetMonthIndex) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  // Extract all distinct Maker usernames from live records
+  const allAvailableMakers = useMemo(() => {
+    const set = new Set();
+    rawMerchants.forEach((m) => {
+      const u = getMerchantMaker(m);
+      if (u && u !== "unknown" && u !== "Unknown Maker") set.add(u);
+    });
+    rawQrs.forEach((q) => {
+      const u = getQrMaker(q);
+      if (u && u !== "unknown" && u !== "Unknown Maker") set.add(u);
+    });
+    if (currentUsername && currentUsername !== "unknown") set.add(currentUsername);
+    return Array.from(set).sort();
+  }, [rawMerchants, rawQrs, currentUsername]);
+
+  // Extract distinct Years from live records
+  const availableYears = useMemo(() => {
+    const set = new Set(["2027","2026", "2025", "2024"]);
+    rawMerchants.forEach((m) => {
+      const d = parseRecordDate(m.MER_CREATION_DATE || m.createdAt);
+      if (d) set.add(d.getFullYear().toString());
+    });
+    rawQrs.forEach((q) => {
+      const d = parseRecordDate(q.CREATED_AT || q.createdAt);
+      if (d) set.add(d.getFullYear().toString());
+    });
+    return Array.from(set).sort().reverse();
+  }, [rawMerchants, rawQrs]);
+
+  // Effective Maker Filter: for Maker, lock to current user; for Manager, use selected maker
+  const effectiveMakerFilter = isManager ? selectedMaker : currentUsername;
+
+  // 1. Filtered Live Merchant Creations
+  const filteredMerchants = useMemo(() => {
+    return rawMerchants.filter((m) => {
+      // Date filter
+      if (!matchesDateFilter(m.MER_CREATION_DATE || m.createdAt || m.created_at)) {
+        return false;
+      }
+
+      // Maker filter
+      const maker = getMerchantMaker(m);
+      if (effectiveMakerFilter !== "ALL") {
+        if (maker.toLowerCase() !== effectiveMakerFilter.toLowerCase()) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [rawMerchants, selectedYear, selectedMonth, effectiveMakerFilter]);
+
+  // 2. Filtered Live QR Generations
+  const filteredQrs = useMemo(() => {
+    return rawQrs.filter((q) => {
+      // Date filter
+      if (!matchesDateFilter(q.CREATED_AT || q.createdAt || q.created_at)) {
+        return false;
+      }
+
+      // Maker filter
+      const maker = getQrMaker(q);
+      if (effectiveMakerFilter !== "ALL") {
+        if (maker.toLowerCase() !== effectiveMakerFilter.toLowerCase()) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [rawQrs, selectedYear, selectedMonth, effectiveMakerFilter]);
+
+  // 3. Employee / Maker Performance Breakdown (Aggregation per maker)
+  const makerPerformanceList = useMemo(() => {
+    const map = {};
+
+    // First, if a specific maker is selected, seed that maker
+    if (effectiveMakerFilter !== "ALL") {
+      map[effectiveMakerFilter] = {
+        makerUsername: effectiveMakerFilter,
+        branch: currentBranch || "unknown",
+        merchantsCreated: 0,
+        qrGenerated: 0,
+      };
+    }
+
+    // Tally merchants created by maker in the filtered period
+    filteredMerchants.forEach((m) => {
+      const maker = getMerchantMaker(m);
+      const branch = getMerchantBranch(m);
+      if (!map[maker]) {
+        map[maker] = {
+          makerUsername: maker,
+          branch: branch,
+          merchantsCreated: 0,
+          qrGenerated: 0,
+        };
+      }
+      map[maker].merchantsCreated += 1;
+      if (branch !== "unknown") map[maker].branch = branch;
+    });
+
+    // Tally QR codes generated by maker in the filtered period
+    filteredQrs.forEach((q) => {
+      const maker = getQrMaker(q);
+      const branch = getQrBranch(q);
+      if (!map[maker]) {
+        map[maker] = {
+          makerUsername: maker,
+          branch: branch,
+          merchantsCreated: 0,
+          qrGenerated: 0,
+        };
+      }
+      map[maker].qrGenerated += 1;
+      if (branch !== "unknown") map[maker].branch = branch;
+    });
+
+    const list = Object.values(map).map((item) => {
+      const rate =
+        item.merchantsCreated > 0
+          ? ((item.qrGenerated / item.merchantsCreated) * 100).toFixed(1)
+          : item.qrGenerated > 0
+          ? "100.0"
+          : "0.0";
+
+      return {
+        ...item,
+        qrRate: parseFloat(rate),
+      };
+    });
+
+    // Sort descending by created merchants and generated QRs
+    list.sort((a, b) => b.merchantsCreated - a.merchantsCreated || b.qrGenerated - a.qrGenerated);
+
+    return list;
+  }, [filteredMerchants, filteredQrs, effectiveMakerFilter]);
+
+  // Overall KPI Metrics for the Selected Filter Configuration
+  const totalMerchantsCreated = filteredMerchants.length;
+  const totalQrsGenerated = filteredQrs.length;
+  const activeMakersCount = makerPerformanceList.length;
+  const overallQrRate =
+    totalMerchantsCreated > 0
+      ? ((totalQrsGenerated / totalMerchantsCreated) * 100).toFixed(1)
+      : totalQrsGenerated > 0
+      ? "100.0"
+      : "0.0";
+
+  // Reset Filters to default
+  const handleResetFilters = () => {
+    setSelectedYear(currentYearStr);
+    setSelectedMonth("All Months");
+    setSelectedMaker(isManager ? "ALL" : currentUsername);
+    setCurrentPage(1);
+    setTableSearch("");
+  };
+
+  // Detailed Transaction Records List
+  const detailedTransactions = useMemo(() => {
+    const list = [];
+
+    // Map QR codes by account number to link QR status
+    const qrAccountSet = new Set(
+      rawQrs.map((q) => (q.ACC_NUMB || q.account || "").trim()).filter(Boolean)
+    );
+
+    filteredMerchants.forEach((m, idx) => {
+      const acc = (m.MER_ACCOUNT || m.account || "").trim();
+      const hasQr = qrAccountSet.has(acc);
+      list.push({
+        id: `M-${idx + 1}`,
+        recordType: "Merchant Created",
+        merId: m.MER_ID || m.mer_id || "N/A",
+        accountNumber: acc || "N/A",
+        name: m.MER_BUSINESS_NAME || m.MER_OWNER_NAME || "N/A",
+        maker: getMerchantMaker(m),
+        branch: getMerchantBranch(m),
+        date: formatDateDisplay(m.MER_CREATION_DATE || m.createdAt),
+        qrStatus: hasQr ? "Generated" : "Pending QR",
+        status: m.STATUS === 0 || m.status === 0 ? "Disabled" : "Active",
+      });
+    });
+
+    return list;
+  }, [filteredMerchants, rawQrs]);
+
+  // Search in Detailed Table
+  const searchFilteredTable = useMemo(() => {
+    const query = tableSearch.toLowerCase().trim();
+    if (!query) return detailedTransactions;
+    return detailedTransactions.filter(
+      (r) =>
+        r.name.toLowerCase().includes(query) ||
+        r.accountNumber.toLowerCase().includes(query) ||
+        r.maker.toLowerCase().includes(query) ||
+        r.branch.toLowerCase().includes(query) ||
+        r.merId.toLowerCase().includes(query)
+    );
+  }, [detailedTransactions, tableSearch]);
+
+  const totalPages = Math.ceil(searchFilteredTable.length / itemsPerPage) || 1;
+  const paginatedTableItems = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return searchFilteredTable.slice(start, start + itemsPerPage);
+  }, [searchFilteredTable, currentPage, itemsPerPage]);
+
+  // Export to Excel
+  const handleExportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+
+    // Sheet 1: Maker (Employee) Performance
+    const perfSheetData = makerPerformanceList.map((item, index) => ({
+      Rank: index + 1,
+      "Maker Username": item.makerUsername,
+      Branch: item.branch,
+      "Total Merchants Created": item.merchantsCreated,
+      "Total QR Codes Generated": item.qrGenerated,
+      "QR Generation Rate (%)": `${item.qrRate}%`,
+    }));
+    const perfSheet = XLSX.utils.json_to_sheet(perfSheetData);
+    XLSX.utils.book_append_sheet(workbook, perfSheet, "Maker_Performance");
+
+    // Sheet 2: Merchant & QR Detailed Records
+    const detailSheetData = searchFilteredTable.map((r, index) => ({
+      "S/N": index + 1,
+      "Record Type": r.recordType,
+      "Merchant ID": r.merId,
+      "Account Number": r.accountNumber,
+      "Business Name": r.name,
+      "Maker Username": r.maker,
+      Branch: r.branch,
+      Date: r.date,
+      "QR Status": r.qrStatus,
+      Status: r.status,
+    }));
+    const detailSheet = XLSX.utils.json_to_sheet(detailSheetData);
+    XLSX.utils.book_append_sheet(workbook, detailSheet, "Detailed_Records");
+
+    const makerSlug = effectiveMakerFilter === "ALL" ? "All_Makers" : effectiveMakerFilter;
+    const periodSlug = `${selectedMonth}_${selectedYear}`;
+    XLSX.writeFile(workbook, `Merchant_QR_Report_${makerSlug}_${periodSlug}.xlsx`);
+  };
+
+  const periodDisplay = `${selectedMonth === "All Months" ? "Entire Year" : selectedMonth} ${selectedYear}`;
 
   return (
-    <Container fluid>
-      <Row>
-        <Col md="12" className="mb-4 mt-1">
-          <div className="d-flex flex-wrap justify-content-between align-items-center">
-            {/* <h4 className="font-weight-bold text-center">
-              Well come to Abay bank Qr code Generate system
-            </h4> */}
-
-            {/* <div className="form-group mb-0 vanila-daterangepicker d-flex flex-row">
-                        <div className="date-icon-set">
-                                <Datepickers className="vanila-datepicker" names="start" placeholder="From Date" />
-                            <span className="search-link">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="" width="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                            </span>
-                        </div>   
-                            <span className="flex-grow-0">
-                            <span className="btn">To</span>
-                        </span>
-                        <div className="date-icon-set">
-                            <Datepickers  names="end" placeholder="To Date" />
-                        <span className="search-link">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="" width="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                        </span>
-                    </div>   
-                        
-                       
-                    </div> */}
+    <div className="dashboard-container">
+      {/* 1. Header Section */}
+      <div className="dashboard-header">
+        <div className="dashboard-title-area">
+          <h1 className="dashboard-main-title">
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#005580"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            Merchant QR Dashboard
+          </h1>
+          <div className="dashboard-reporting-period">
+            <span>Reporting period:</span>
+            <span className="period-highlight-pill">{periodDisplay}</span>
+            <span className="live-status-pill ml-2">
+              <span className="live-pulse-dot"></span>
+              Live Backend API
+            </span>
           </div>
-        </Col>
+        </div>
 
-        {/* <Row>
-          <Col md="4">
-            <Card>
-              <Card.Img variant="top" src={sofi} alt="Product Image" />
-              <Card.Body>
-                <Card.Title>Course Title</Card.Title>
-                <Card.Text>
-                  A brief description of the course or program goes here.
-                </Card.Text>
-                <button className="btn btn-primary">Enroll</button>
-              </Card.Body>
-            </Card>
-          </Col>
+        {/* Header Action Buttons & Role Switcher */}
+        <div className="dashboard-header-actions">
+          {/* Access Badge */}
+          <div className={`role-badge ${isManager ? "manager" : "maker"}`}>
+            <span
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                backgroundColor: isManager ? "#2e7d32" : "#e65100",
+                display: "inline-block",
+              }}
+            ></span>
+            {isManager
+              ? "Manager Access (All Makers Visibility)"
+              : `Maker View (${currentUsername})`}
+          </div>
 
-          <Col md="4">
-            <Card>
-              <Card.Img variant="top" src={sofi} alt="Product Image" />
-              <Card.Body>
-                <Card.Title>Course Title</Card.Title>
-                <Card.Text>
-                  A brief description of the course or program goes here.
-                </Card.Text>
-                <button className="btn btn-primary">Enroll</button>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md="4">
-            <Card>
-              <Card.Img variant="top" src={sofi} alt="Product Image" />
-              <Card.Body>
-                <Card.Title>Course Title</Card.Title>
-                <Card.Text>
-                  A brief description of the course or program goes here.
-                </Card.Text>
-                <button className="btn btn-primary">Enroll</button>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-        <Row>
-          <Col md="4">
-            <Card>
-              <Card.Img variant="top" src={sofi} alt="Product Image" />
-              <Card.Body>
-                <Card.Title>Course Title</Card.Title>
-                <Card.Text>
-                  A brief description of the course or program goes here.
-                </Card.Text>
-                <button className="btn btn-primary">Enroll</button>
-              </Card.Body>
-            </Card>
-          </Col>
+          {/* Test toggle between Manager and Maker */}
+          <button
+            className="role-toggle-btn"
+            onClick={() => setRoleMode(isManager ? "maker" : "manager")}
+            title="Toggle between Manager and Maker view to test scoping"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Switch to {isManager ? "Maker View" : "Manager View"}
+          </button>
 
-          <Col md="4">
-            <Card>
-              <Card.Img variant="top" src={sofi} alt="Product Image" />
-              <Card.Body>
-                <Card.Title>Course Title</Card.Title>
-                <Card.Text>
-                  A brief description of the course or program goes here.
-                </Card.Text>
-                <button className="btn btn-primary">Enroll</button>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md="4">
-            <Card>
-              <Card.Img variant="top" src={sofi} alt="Product Image" />
-              <Card.Body>
-                <Card.Title>Course Title</Card.Title>
-                <Card.Text>
-                  A brief description of the course or program goes here.
-                </Card.Text>
-                <button className="btn btn-primary">Enroll</button>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row> */}
-        {/* <Col lg="8" md="12">
-                <Row>
-                    <Col md="4">
-                        <Card>
-                        <Card.Body>
-                            <div className="d-flex align-items-center">
-                                <div className="">
-                                    <p className="mb-2 text-secondary">Total Profit</p>
-                                    <div className="d-flex flex-wrap justify-content-start align-items-center">
-                                        <h5 className="mb-0 font-weight-bold">$95,595</h5>
-                                        <p className="mb-0 ml-3 text-success font-weight-bold">+3.55%</p>
-                                    </div>                            
-                                </div>
-                            </div>
-                        </Card.Body>
-                        </Card>   
-                    </Col>
-                    <Col md="4">
-                    <Card>
-                        <Card.Body>
-                            <div className="d-flex align-items-center">
-                                <div className="">
-                                    <p className="mb-2 text-secondary">Total Expenses</p>
-                                    <div className="d-flex flex-wrap justify-content-start align-items-center">
-                                        <h5 className="mb-0 font-weight-bold">$12,789</h5>
-                                        <p className="mb-0 ml-3 text-success font-weight-bold">+2.67%</p>
-                                    </div>                            
-                                </div>
-                            </div>
-                        </Card.Body>
-                    </Card>   
-                    </Col>
-                    <Col md="4">
-                    <Card>
-                        <Card.Body>
-                            <div className="d-flex align-items-center">
-                                <div className="">
-                                    <p className="mb-2 text-secondary">New Users</p>
-                                    <div className="d-flex flex-wrap justify-content-start align-items-center">
-                                    <h5 className="mb-0 font-weight-bold">13,984</h5>
-                                    <p className="mb-0 ml-3 text-danger font-weight-bold">-9.98%</p>
-                                    </div>                            
-                                </div>
-                            </div>
-                        </Card.Body>
-                    </Card>   
-                    </Col>
-                    <Col md="12">
-                    <Card>
-                        <Card.Body>
-                        <div className="d-flex justify-content-between align-items-center flex-wrap">
-                            <h4 className="font-weight-bold">Sales Report</h4>
-                            <div className="d-flex justify-content-between align-items-center">
-                                <div><svg width="24" height="24" viewBox="0 0 24 24" fill="primary" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" fill="#3378FF" />
-                                    </svg>
-                                    <span>Incomes</span>
-                                </div>
-                                <div className="ml-3"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <rect x="3" y="3" width="18" height="18" rx="2" fill="#19b3b3" />
-                                                </svg>
-                                    <span>Expenses</span>
-                                </div>
-                            </div>
-                        </div>
-                        <Chart className="custom-chart" options={chart1.options} series={chart1.series} type="area"   height="265"  />
-                        </Card.Body>
-                    </Card>   
-                    </Col>
-                </Row>
+          {/* Refresh live data */}
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={fetchLiveApiData}
+            disabled={loading}
+            className="d-flex align-items-center gap-1 font-weight-bold"
+            style={{ borderRadius: "6px" }}
+          >
+            {loading ? (
+              <Spinner animation="border" size="sm" />
+            ) : (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="mr-1"
+              >
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+            )}
+            Sync API Data
+          </Button>
+
+          {/* Export Excel */}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportExcel}
+            className="d-flex align-items-center gap-1 font-weight-bold"
+            style={{ borderRadius: "6px" }}
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mr-1"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Export Excel
+          </Button>
+        </div>
+      </div>
+
+      {/* Error alert if API fails */}
+      {errorMsg && (
+        <Alert variant="danger" className="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>Backend API Error:</strong> {errorMsg}
+          </div>
+          <Button variant="danger" size="sm" onClick={fetchLiveApiData}>
+            Retry Connection
+          </Button>
+        </Alert>
+      )}
+
+      {/* 2. Top Summary KPI Cards (Based on selected Month, Year, and Maker) */}
+      <div className="kpi-grid">
+        {/* Total Merchants Created */}
+        <div className="kpi-card merchants">
+          <div className="kpi-top-row">
+            <div className="kpi-icon-wrap">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 14 15 14 15 22"></polyline>
+              </svg>
+            </div>
+            <span className="kpi-trend positive">Backend Data</span>
+          </div>
+          <div className="kpi-number">
+            {loading ? <Spinner animation="border" size="sm" /> : totalMerchantsCreated.toLocaleString()}
+          </div>
+          <div className="kpi-label">Total Merchants Created</div>
+          <div className="kpi-footnote">
+            {effectiveMakerFilter === "ALL"
+              ? "All makers combined"
+              : `Created by ${effectiveMakerFilter}`}
+          </div>
+        </div>
+
+        {/* Total QR Codes Generated */}
+        <div className="kpi-card qr">
+          <div className="kpi-top-row">
+            <div className="kpi-icon-wrap">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+            </div>
+            <span className="kpi-trend positive">Backend Data</span>
+          </div>
+          <div className="kpi-number">
+            {loading ? <Spinner animation="border" size="sm" /> : totalQrsGenerated.toLocaleString()}
+          </div>
+          <div className="kpi-label">Total Generated QR Codes</div>
+          <div className="kpi-footnote">
+            {effectiveMakerFilter === "ALL"
+              ? "All makers combined"
+              : `Generated by ${effectiveMakerFilter}`}
+          </div>
+        </div>
+
+        {/* QR Generation Rate */}
+        <div className="kpi-card rate">
+          <div className="kpi-top-row">
+            <div className="kpi-icon-wrap">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+            <span className="kpi-trend positive" style={{ background: "#f3e5f5", color: "#6a1b9a" }}>
+              Conversion
+            </span>
+          </div>
+          <div className="kpi-number">
+            {loading ? <Spinner animation="border" size="sm" /> : `${overallQrRate}%`}
+          </div>
+          <div className="kpi-label">QR Generation Rate</div>
+          <div className="kpi-footnote">Generated QRs / Created Merchants</div>
+        </div>
+
+        {/* Active Makers */}
+        <div className="kpi-card makers">
+          <div className="kpi-top-row">
+            <div className="kpi-icon-wrap">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <span className="kpi-trend positive" style={{ background: "#fff3e0", color: "#e65100" }}>
+              Employees
+            </span>
+          </div>
+          <div className="kpi-number">
+            {loading ? <Spinner animation="border" size="sm" /> : activeMakersCount}
+          </div>
+          <div className="kpi-label">Makers Active</div>
+          <div className="kpi-footnote">
+            {effectiveMakerFilter === "ALL" ? "Total active makers" : "Single Maker Profile"}
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Filter Configuration Card: Manager selects Month, Year, Maker Username */}
+      <div className="filter-card">
+        <div className="filter-card-header">
+          <div>
+            <h2 className="filter-title">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              </svg>
+              Filter Reports by Maker, Month & Year
+            </h2>
+            <p className="filter-subtitle">
+              Select Year, Month, and Maker Username to view real-time merchant creation and QR generation reports.
+            </p>
+          </div>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={handleResetFilters}
+            style={{ color: "#005580", textDecoration: "none", fontWeight: "600" }}
+          >
+            Reset Filters
+          </Button>
+        </div>
+
+        <div className="filter-card-body">
+          <Row>
+            {/* Year Selector */}
+            <Col md="4" className="mb-3">
+              <Form.Group>
+                <Form.Label className="font-weight-bold text-secondary" style={{ fontSize: "13px" }}>
+                  Year
+                </Form.Label>
+                <Form.Control
+                  as="select"
+                  value={selectedYear}
+                  onChange={(e) => {
+                    setSelectedYear(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{ height: "42px", borderRadius: "8px", fontWeight: "500" }}
+                >
+                  {availableYears.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </Form.Control>
+              </Form.Group>
             </Col>
-            <Col lg="4" md="8">
-                <Card className="card-block card-stretch card-height">
-                    <Card.Header className="card-header-border d-flex justify-content-between">
-                        <div className="header-title">
-                        <h4 className="card-title">Top Selling Product</h4>
-                        </div>
-                    </Card.Header>
-                    <div className="card-body-list">               
-                        <ul className="list-style-3 mb-0">
-                        <li className="p-3 list-item d-flex justify-content-start align-items-center">
-                            <div className="avatar">
-                                <img className="avatar avatar-img avatar-60 rounded" src={product1} alt="1.jpg" />                        
-                            </div>
-                            <div className="list-style-detail ml-3 mr-2">
-                                <p className="mb-0">Rockerz Bluetooth Headset</p>
-                            </div>
-                            <div className="list-style-action d-flex justify-content-end ml-auto">                        
-                                <h6 className="font-weight-bold">$1,056</h6>                        
-                            </div>
-                        </li>
-                        <li className="p-3 list-item d-flex justify-content-start align-items-center">
-                            <div className="avatar">
-                                <img className="avatar avatar-img avatar-60 rounded" src={product2} alt="2.jpg" />                        
-                            </div>
-                            <div className="list-style-detail ml-3 mr-2">
-                                <p className="mb-0">Wifi Security Camera</p>
-                            </div>
-                            <div className="list-style-action d-flex justify-content-end ml-auto">                        
-                                <h6 className="font-weight-bold">$1,799</h6>                        
-                            </div>
-                        </li>
-                        <li className="p-3 list-item d-flex justify-content-start align-items-center">
-                            <div className="avatar">
-                                <img className="avatar avatar-img avatar-60 rounded" src={product13} alt="3.jpg" />                        
-                            </div>
-                            <div className="list-style-detail ml-3 mr-2">
-                                <p className="mb-0">Stone Bluetooth Speaker</p>
-                            </div>
-                            <div className="list-style-action d-flex justify-content-end ml-auto">                        
-                                <h6 className="font-weight-bold">$1,099</h6>                        
-                            </div>
-                        </li>
-                        <li className="p-3 list-item d-flex justify-content-start align-items-center">
-                            <div className="avatar">
-                                <img className="avatar avatar-img avatar-60 rounded" src={product4} alt="4.jpg" />                        
-                            </div>
-                            <div className="list-style-detail ml-3 mr-2">
-                                <p className="mb-0">Ryzen 5 Hexa Core 5600H</p>
-                            </div>
-                            <div className="list-style-action d-flex justify-content-end ml-auto">                        
-                                <h6 className="font-weight-bold">$9,999</h6>                        
-                            </div>
-                        </li>
-                        </ul>
-                    </div>
-                </Card>
-                
+
+            {/* Month Selector */}
+            <Col md="4" className="mb-3">
+              <Form.Group>
+                <Form.Label className="font-weight-bold text-secondary" style={{ fontSize: "13px" }}>
+                  Month
+                </Form.Label>
+                <Form.Control
+                  as="select"
+                  value={selectedMonth}
+                  onChange={(e) => {
+                    setSelectedMonth(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{ height: "42px", borderRadius: "8px", fontWeight: "500" }}
+                >
+                  {MONTH_NAMES.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </Form.Control>
+              </Form.Group>
             </Col>
-            <Col md="4">
-                <Row>
-                    <Col md="12">
-                        <Card className="bg-primary">
-                            <Card.Body>
-                                <div className="d-flex align-items-center">
-                                    <div className="fit-icon-2 text-info text-center">
-                                        <div style={{ width: 75, height: 75 }}>
-                                            <CircularProgressbar styles={buildStyles({textColor:'#c7cbd3',textSize:'23px',pathColor: `#c7cbd3`,trailColor:'#fff'})} value={62} text={'62%'}  />
-                                        </div>
-                                    </div>
-                                    <div className="ml-3">
-                                        <h5 className="text-white font-weight-bold">1,860 <small> /3k Target</small></h5>
-                                        <small className="mb-0">Order In Period</small>
-                                    </div>
-                                </div>
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                    <Col md="12">
-                        <Card>
-                        <Card.Body>
-                            <div className="d-flex justify-content-between align-items-center">
-                                <h6 className="font-weight-bold">Active Users</h6>
-                                <div className="d-flex align-items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="mr-2" width="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                    <span className=" font-weight-bold">200</span>
-                                </div>
-                            </div>
-                            <p className="mb-0">Pages views per day</p>
-                            <Chart className="custom-chart" options={chart2.options} series={chart2.series} type="bar"   height="183"  />
-                            <div className="d-flex justify-content-between align-items-center">
-                                <p className="mb-0 pt-3 ">25 June</p>
-                                <p className="mb-0 pt-3 ">26 June</p>
-                                <p className="mb-0 pt-3 ">27 June</p>
-                            </div>
-                        </Card.Body>
-                        </Card>
-                    </Col>
-                </Row>
+
+            {/* Maker Username Selector */}
+            <Col md="4" className="mb-3">
+              <Form.Group>
+                <Form.Label className="font-weight-bold text-secondary d-flex align-items-center" style={{ fontSize: "13px" }}>
+                  Maker Username
+                  {!isManager && (
+                    <span className="maker-restricted-badge">
+                      <svg
+                        width="11"
+                        height="11"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                      </svg>
+                      Maker view (locked)
+                    </span>
+                  )}
+                </Form.Label>
+
+                {isManager ? (
+                  <Form.Control
+                    as="select"
+                    value={selectedMaker}
+                    onChange={(e) => {
+                      setSelectedMaker(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    style={{ height: "42px", borderRadius: "8px", fontWeight: "500" }}
+                  >
+                    <option value="ALL">All makers (manager only)</option>
+                    {allAvailableMakers.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </Form.Control>
+                ) : (
+                  <Form.Control
+                    type="text"
+                    value={currentUsername}
+                    disabled
+                    readOnly
+                    style={{
+                      height: "42px",
+                      borderRadius: "8px",
+                      backgroundColor: "#f1f5f9",
+                      color: "#475569",
+                      cursor: "not-allowed",
+                      fontWeight: "600",
+                    }}
+                  />
+                )}
+                <Form.Text className="text-muted" style={{ fontSize: "11px" }}>
+                  {isManager
+                    ? "Managers can select any maker username or view all makers combined."
+                    : "Makers are restricted to their own submitted records."}
+                </Form.Text>
+              </Form.Group>
             </Col>
-            <Col lg="4" md="6">
-                <Card className="card-block card-stretch card-height">
-                    <Card.Header className="d-flex justify-content-between">
-                        <div className="header-title">
-                        <h4 className="card-title">Upcoming Events</h4>
-                        </div>
-                        <div className="card-header-toolbar d-flex align-items-center">                  
-                        <Dropdown>
-                                <Dropdown.Toggle href="#" variant="text-muted pl-3" id="dropdownMenuButton-event" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" stroke="currentColor" strokeWidth="2" aria-hidden="true"   preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
-                                    <g fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="12" cy="12" r="1"/>
-                                        <circle cx="19" cy="12" r="1"/>
-                                        <circle cx="5" cy="12" r="1"/></g>
-                                    </svg>
-                                </Dropdown.Toggle>
-                                <Dropdown.Menu aria-labelledby="dropdownMenuButton-event">
-                                    <Dropdown.Item href="#">
-                                        <svg className="svg-icon text-secondary" width="20" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Edit
-                                    </Dropdown.Item>
-                                    <Dropdown.Item href="#">
-                                        <svg className="svg-icon text-secondary" width="20" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
-                                        View
-                                    </Dropdown.Item>
-                                    <Dropdown.Item href="#">
-                                        <svg className="svg-icon text-secondary" width="20" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                        Delete
-                                    </Dropdown.Item>
-                                </Dropdown.Menu>
-                            </Dropdown>
-                        </div>
-                    </Card.Header>
-                    <Card.Body className="p-0">
-                        <div className="table-responsive">
-                        <table className="table table-spacing mb-0">
-                            <tbody>
-                                <tr className="white-space-no-wrap">
-                                    <td>
-                                    <h6 className="mb-0 text-uppercase text-secondary">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="pr-2" width="30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        30 Jun, Tue</h6>
-                                    </td>
-                                    <td className="pl-0 py-3">
-                                    Big Billion Day Sale
-                                    </td>
-                                </tr>
-                                <tr className="white-space-no-wrap">
-                                    <td>
-                                    <h6 className="mb-0 text-uppercase text-secondary">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="pr-2" width="30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        09 July, Mon</h6>
-                                    </td>
-                                    <td className="pl-0 py-3">
-                                    5% Off on Mobile
-                                    </td>
-                                </tr>
-                                <tr className="white-space-no-wrap">
-                                    <td>
-                                    <h6 className="mb-0 text-uppercase text-secondary">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="pr-2" width="30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        15 Aug, Sun</h6>
-                                    </td>
-                                    <td className="pl-0 py-3">
-                                    Electronics Sale 
-                                    </td>
-                                </tr>
-                                <tr className="white-space-no-wrap">
-                                    <td>
-                                    <h6 className="mb-0 text-uppercase text-secondary">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="pr-2" width="30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        26 Oct, Thu</h6>
-                                    </td>
-                                    <td className="pl-0 py-3">
-                                    Fashionable Sale
-                                    </td>
-                                </tr>
-                                <tr className="white-space-no-wrap">
-                                    <td>
-                                    <h6 className="mb-0 text-uppercase text-secondary">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="pr-2" width="30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        25 Dec, Fri</h6>
-                                    </td>
-                                    <td  className="pl-0 py-3">
-                                    5% Off on Cloths
-                                    </td>
-                                </tr>                        
-                            </tbody>
-                        </table>
-                        
-                        </div>
-                        <div className="d-flex justify-content-end align-items-center border-top-table p-3">
-                            <button className="btn btn-secondary btn-sm">See All</button>
-                        </div>
-                    </Card.Body>
-                </Card>
-            </Col>
-            <Col lg="4" md="6">
-                <Card>
-                    <Card.Body>
-                        <h4 className="font-weight-bold mb-3">Popular Categories</h4>
-                        <Chart className="custom-chart" options={chart3.options} series={chart3.series} type="donut"   height="330"  />
-                        <div className="d-flex justify-content-around align-items-center">
-                        <div><svg width="24" height="24" viewBox="0 0 24 24" fill="#ffbb33" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="3" y="3" width="18" height="18" rx="2" fill="#ffbb33" />
-                                </svg>
-                                
-                                <span>Mobile</span>
-                        </div>
-                        <div>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="#e60000" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="3" y="3" width="18" height="18" rx="2" fill="#e60000" />
-                                </svg>
-                                
-                                <span>Laptop</span>
-                        </div>
-                        </div>
-                        <div className="d-flex justify-content-around align-items-center mt-3">
-                        <div>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="primary" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="3" y="3" width="18" height="18" rx="2" fill="#04237D" />
-                                </svg>
-                                
-                                <span>Electronics</span>
-                        </div>
-                        <div>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="primary" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="3" y="3" width="18" height="18" rx="2" fill="#8080ff" />
-                                </svg>
-                                
-                                <span>Others</span>
-                        </div>
-                        </div>
-                    </Card.Body>
-                </Card>
-            </Col>
-            <Col lg="8" md="12">
-                <Card>
-                    <Card.Header className="d-flex justify-content-between">
-                        <div className="header-title">
-                        <h4 className="card-title">New Customer</h4>
-                        </div>
-                        <div className="card-header-toolbar d-flex align-items-center">                  
-                        <Dropdown>
-                                <Dropdown.Toggle href="#" variant="text-muted pl-3" id="dropdownMenuButton-customer" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"  stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
-                                    <g fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="12" cy="12" r="1"/>
-                                        <circle cx="19" cy="12" r="1"/>
-                                        <circle cx="5" cy="12" r="1"/></g>
-                                    </svg>
-                                </Dropdown.Toggle>
-                                <Dropdown.Menu aria-labelledby="dropdownMenuButton-customer">
-                                    <Dropdown.Item href="#">
-                                        <svg className="svg-icon text-secondary" width="20" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Edit
-                                    </Dropdown.Item>
-                                    <Dropdown.Item href="#">
-                                        <svg className="svg-icon text-secondary" width="20" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
-                                        View
-                                    </Dropdown.Item>
-                                    <Dropdown.Item href="#">
-                                        <svg className="svg-icon text-secondary" width="20" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                        Delete
-                                    </Dropdown.Item>
-                                </Dropdown.Menu>
-                            </Dropdown>
-                        </div>
-                    </Card.Header>
-                    <Card.Body className="p-0">
-                        <div className="table-responsive">
-                        <table className="table mb-0">
-                            <thead className="table-color-heading">
-                                <tr className="text-secondary">
-                                    <th scope="col">Date</th>
-                                    <th scope="col">Customer</th>
-                                    <th scope="col">Status</th>
-                                    <th scope="col" className="text-right">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr className="white-space-no-wrap">
-                                    <td>01 Jun 2020</td>
-                                    <td>
-                                    <div className="d-flex align-items-center">
-                                        <div className="avatar-45 mr-2">
-                                            <img src={user2} className="img-fluid rounded-circle"
-                                                alt="user2" />
-                                        </div>
-                                        <div>Maggie Potts</div>
-                                    </div>
-                                    </td>
-                                    <td>
-                                    <p className="mb-0 text-success d-flex justify-content-start align-items-center">
-                                        <small><svg className="mr-2" xmlns="http://www.w3.org/2000/svg" width="18" viewBox="0 0 24 24" fill="none">                                                
-                                        <circle cx="12" cy="12" r="8" fill="#3cb72c"></circle></svg>
-                                        </small> Completed
-                                    </p>
-                                    </td>
-                                    <td className="text-right">$104.98</td>
-                                </tr>
-                                <tr className="white-space-no-wrap">
-                                    <td>02 Jun 2020</td>
-                                    <td>
-                                    <div className="d-flex align-items-center">
-                                        <div className="avatar-45 mr-2">
-                                            <img src={user5} className="img-fluid rounded-circle"
-                                                alt="user5" />
-                                        </div>
-                                        <div>Kevin Adkins</div>
-                                    </div>
-                                    </td>
-                                    <td>
-                                    <p className="mb-0 text-success d-flex justify-content-start align-items-center">
-                                        <small><svg className="mr-2" xmlns="http://www.w3.org/2000/svg" width="18" viewBox="0 0 24 24" fill="none">                                                
-                                        <circle cx="12" cy="12" r="8" fill="#3cb72c"></circle></svg>
-                                        </small> Completed
-                                    </p>
-                                    </td>
-                                    <td className="text-right">$233.00</td>
-                                </tr>
-                                <tr className="white-space-no-wrap">
-                                    <td>05 Jun 2020</td>
-                                    <td>
-                                    <div className="d-flex align-items-center">
-                                        <div className="avatar-45 mr-2">
-                                            <img src={user1} className="img-fluid rounded-circle"
-                                                alt="user1" />
-                                        </div>
-                                        <div>Max Lynn</div>
-                                    </div>
-                                    </td>
-                                    <td>
-                                    <p className="mb-0 text-warning d-flex justify-content-start align-items-center">
-                                        <small><svg className="mr-2" xmlns="http://www.w3.org/2000/svg" width="18" viewBox="0 0 24 24" fill="none">                                                
-                                        <circle cx="12" cy="12" r="8" fill="#db7e06"></circle></svg>
-                                        </small>Pending
-                                    </p>
-                                    </td>
-                                    <td className="text-right">$150.01</td>
-                                </tr>
-                                <tr className="white-space-no-wrap">
-                                    <td>06 Jun 2020</td>
-                                    <td>
-                                    <div className="d-flex align-items-center">
-                                        <div className="avatar-45 mr-2">
-                                            <img src={user3} className="img-fluid rounded-circle"
-                                                alt="user3" />
-                                        </div>
-                                        <div>Danniw Yatt</div>
-                                    </div>
-                                    </td>
-                                    <td>
-                                    <p className="mb-0 text-danger d-flex justify-content-start align-items-center">
-                                        <small><svg className="mr-2" xmlns="http://www.w3.org/2000/svg" width="18" viewBox="0 0 24 24" fill="none">                                                
-                                        <circle cx="12" cy="12" r="8" fill="#F42B3D"></circle></svg>
-                                        </small>Cancelled
-                                    </p>
-                                    </td>
-                                    <td className="text-right">$199.99</td>
-                                </tr>                        
-                            </tbody>
-                        </table>
-                        <div className="d-flex justify-content-end align-items-center border-top-table p-3">
-                                    <button className="btn btn-secondary btn-sm">See All</button>
-                                </div>
-                        </div>
-                    </Card.Body>
-                </Card>
-            </Col>
-            <Col lg="4" md="12" className="col-lg-4 col-md-12">
-                <Card>
-                    <Card.Body>
-                        <h4 className="font-weight-bold mb-3">City Orders Statistics</h4>
-                          <Leaflet className="custom-chart" />
-                    </Card.Body>
-                </Card>
-            </Col> */}
-      </Row>
-    </Container>
+          </Row>
+        </div>
+      </div>
+
+      {/* 4. Tab Navigation: Maker Performance Breakdown vs Detailed Records */}
+      <div className="dashboard-tabs">
+        <button
+          className={`dashboard-tab-btn ${activeTab === "makers" ? "active" : ""}`}
+          onClick={() => setActiveTab("makers")}
+        >
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Employee (Maker) Creation & QR Generation Breakdown
+          <span className="dashboard-tab-badge">
+            {makerPerformanceList.length} Makers
+          </span>
+        </button>
+
+        <button
+          className={`dashboard-tab-btn ${activeTab === "details" ? "active" : ""}`}
+          onClick={() => setActiveTab("details")}
+        >
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          Detailed Merchant Records
+          <span className="dashboard-tab-badge">
+            {detailedTransactions.length} Records
+          </span>
+        </button>
+      </div>
+
+      {/* 5. TAB 1: MAKER CREATION & QR GENERATION BREAKDOWN TABLE */}
+      {activeTab === "makers" && (
+        <div className="performance-card">
+          <div className="performance-card-header">
+            <div>
+              <h3 className="performance-card-title">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#005580"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <polyline points="16 11 18 13 22 9"></polyline>
+                </svg>
+                Maker Employee Performance ({periodDisplay})
+              </h3>
+              <span className="report-table-subtitle">
+                Total merchant created and total generated QR code for each maker based on live backend data.
+              </span>
+            </div>
+          </div>
+
+          <div className="table-responsive">
+            <Table className="report-custom-table mb-0" hover>
+              <thead>
+                <tr>
+                  <th style={{ width: "60px" }}>Rank</th>
+                  <th>Maker Username</th>
+                  <th>Branch</th>
+                  <th className="text-center">Total Merchants Created</th>
+                  <th className="text-center">Total Generated QR Codes</th>
+                  <th style={{ minWidth: "180px" }}>QR Generation Rate</th>
+                  <th className="text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="7" className="text-center py-5 text-muted">
+                      <Spinner animation="border" size="sm" className="mr-2" />
+                      Loading live maker performance from backend...
+                    </td>
+                  </tr>
+                ) : makerPerformanceList.length > 0 ? (
+                  makerPerformanceList.map((item, index) => {
+                    let rankClass = "rank-normal";
+                    if (index === 0) rankClass = "rank-gold";
+                    else if (index === 1) rankClass = "rank-silver";
+                    else if (index === 2) rankClass = "rank-bronze";
+
+                    const rateFillClass =
+                      item.qrRate >= 80
+                        ? "high"
+                        : item.qrRate >= 50
+                        ? "medium"
+                        : "low";
+
+                    return (
+                      <tr key={item.makerUsername}>
+                        <td>
+                          <span className={`performance-rank-badge ${rankClass}`}>
+                            {index + 1}
+                          </span>
+                        </td>
+                        <td>
+                          <strong style={{ color: "#005580", fontSize: "14px" }}>
+                            {item.makerUsername}
+                          </strong>
+                          {!isManager && (
+                            <Badge variant="info" className="ml-2">
+                              Your Profile
+                            </Badge>
+                          )}
+                        </td>
+                        <td style={{ color: "#475569" }}>{item.branch}</td>
+                        <td
+                          className="text-center font-weight-bold"
+                          style={{ fontSize: "15px", color: "#005580" }}
+                        >
+                          {item.merchantsCreated.toLocaleString()}
+                        </td>
+                        <td
+                          className="text-center font-weight-bold"
+                          style={{ fontSize: "15px", color: "#2e7d32" }}
+                        >
+                          {item.qrGenerated.toLocaleString()}
+                        </td>
+                        <td>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span style={{ fontWeight: 700, fontSize: "13px" }}>
+                              {item.qrRate}%
+                            </span>
+                            <span style={{ fontSize: "11px", color: "#64748b" }}>
+                              {item.qrGenerated} of {item.merchantsCreated}
+                            </span>
+                          </div>
+                          <div className="rate-bar-container">
+                            <div
+                              className={`rate-bar-fill ${rateFillClass}`}
+                              style={{
+                                width: `${Math.min(item.qrRate, 100)}%`,
+                              }}
+                            ></div>
+                          </div>
+                        </td>
+                        <td className="text-center">
+                          <span
+                            className={`status-pill ${
+                              item.qrRate >= 80
+                                ? "rate-high"
+                                : item.qrRate >= 50
+                                ? "rate-medium"
+                                : "rate-low"
+                            }`}
+                          >
+                            {item.qrRate >= 80
+                              ? "Excellent"
+                              : item.qrRate >= 50
+                              ? "Good"
+                              : "Pending QRs"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center py-5 text-muted">
+                      No records found in backend API for the selected month, year, or maker username.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          </div>
+        </div>
+      )}
+
+      {/* 6. TAB 2: DETAILED RECORDS */}
+      {activeTab === "details" && (
+        <div className="report-table-card">
+          <div className="report-table-header">
+            <div className="report-table-title-area">
+              <h3 className="report-table-title">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#005580"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                Detailed Records ({searchFilteredTable.length} Records)
+              </h3>
+              <span className="report-table-subtitle">
+                Filtered by: Maker: {effectiveMakerFilter === "ALL" ? "All Makers" : effectiveMakerFilter} | Period: {periodDisplay}
+              </span>
+            </div>
+
+            {/* Search & Rows per page */}
+            <div className="d-flex align-items-center gap-2 flex-wrap">
+              <div style={{ position: "relative" }}>
+                <Form.Control
+                  type="text"
+                  placeholder="Search records..."
+                  size="sm"
+                  value={tableSearch}
+                  onChange={(e) => {
+                    setTableSearch(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    borderRadius: "6px",
+                    paddingLeft: "30px",
+                    width: "200px",
+                  }}
+                />
+                <svg
+                  style={{
+                    position: "absolute",
+                    left: "9px",
+                    top: "9px",
+                    color: "#94a3b8",
+                  }}
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </div>
+
+              <select
+                className="form-control form-control-sm"
+                style={{ width: "95px", borderRadius: "6px" }}
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+              >
+                <option value={10}>10 rows</option>
+                <option value={25}>25 rows</option>
+                <option value={50}>50 rows</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="table-responsive">
+            <Table className="report-custom-table mb-0" hover>
+              <thead>
+                <tr>
+                  <th>S/N</th>
+                  <th>Merchant ID</th>
+                  <th>Account Number</th>
+                  <th>Merchant Name</th>
+                  <th>Maker Username</th>
+                  <th>Branch</th>
+                  <th>Date</th>
+                  <th>QR Generation</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="9" className="text-center py-5 text-muted">
+                      <Spinner animation="border" size="sm" className="mr-2" />
+                      Loading records...
+                    </td>
+                  </tr>
+                ) : paginatedTableItems.length > 0 ? (
+                  paginatedTableItems.map((record, index) => {
+                    const serialNumber =
+                      (currentPage - 1) * itemsPerPage + index + 1;
+                    return (
+                      <tr key={record.id || index}>
+                        <td style={{ fontWeight: 600, color: "#64748b" }}>
+                          {serialNumber}
+                        </td>
+                        <td>
+                          <span
+                            style={{
+                              fontFamily: "monospace",
+                              fontWeight: 600,
+                              color: "#005580",
+                            }}
+                          >
+                            {record.merId}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontFamily: "monospace", color: "#334155" }}>
+                            {record.accountNumber}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{record.name}</td>
+                        <td>
+                          <span
+                            style={{
+                              background: "#e2e8f0",
+                              color: "#1e293b",
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              fontSize: "12px",
+                              fontWeight: 500,
+                            }}
+                          >
+                            {record.maker}
+                          </span>
+                        </td>
+                        <td style={{ color: "#475569" }}>{record.branch}</td>
+                        <td style={{ color: "#64748b", fontSize: "12px" }}>
+                          {record.date || "N/A"}
+                        </td>
+                        <td>
+                          {record.qrStatus === "Generated" ? (
+                            <span className="status-pill generated">
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
+                              Generated
+                            </span>
+                          ) : (
+                            <span className="status-pill pending">
+                              Pending QR
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "50%",
+                              backgroundColor:
+                                record.status === "Active" ? "#22c55e" : "#ef4444",
+                              marginRight: "6px",
+                            }}
+                          ></span>
+                          {record.status}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="9" className="text-center py-5 text-muted">
+                      No records found matching the selected filter criteria.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <div
+            className="d-flex justify-content-between align-items-center p-3 border-top"
+            style={{ backgroundColor: "#f8fafc" }}
+          >
+            <span style={{ fontSize: "13px", color: "#64748b" }}>
+              Showing{" "}
+              {searchFilteredTable.length === 0
+                ? 0
+                : (currentPage - 1) * itemsPerPage + 1}{" "}
+              to{" "}
+              {Math.min(currentPage * itemsPerPage, searchFilteredTable.length)} of{" "}
+              {searchFilteredTable.length} records
+            </span>
+
+            <div className="d-flex align-items-center gap-1">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                style={{ borderRadius: "6px" }}
+              >
+                Previous
+              </Button>
+              <span
+                className="px-3"
+                style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}
+              >
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                style={{ borderRadius: "6px" }}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

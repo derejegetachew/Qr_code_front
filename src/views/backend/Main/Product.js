@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Container, Form, Spinner, Button, Row, Col } from "react-bootstrap";
 import Card from "../../../components/Card";
 import { QRCode } from "react-qrcode-logo";
@@ -48,6 +49,17 @@ const Products = () => {
   const branch = user ? user.branch : "unknown branch";
   const username = user ? user.username : "Unknown Username";
   const branch_code = user ? user.branch_code : "Unknown Branch Code";
+  const getMerchantNameFontSize = (name) => {
+    if (!name) return "24px";
+    const len = name.trim().length;
+    if (len <= 12) return "32px"; // Small name: increase font
+    if (len <= 18) return "24px";
+    if (len <= 24) return "20px";
+    if (len <= 30) return "18px";
+    if (len <= 38) return "17px";
+    return "16px";                // Large text: decrease font so full name fits
+  };
+
   const handleError = (message) => {
     setError(message);
     setTimeout(() => {
@@ -82,7 +94,7 @@ const Products = () => {
           {
             id: "28",
             value: Object.entries(merchant.merchantAccountInfo || {}).map(
-              ([tag, value]) => ({ id: tag, value })
+              ([tag, value]) => ({ id: tag, value }),
             ),
           },
           { id: "52", value: merchant.MER_CODE || "5411" },
@@ -128,28 +140,90 @@ const Products = () => {
       await saveMerchantData(QRdata);
     } catch (error) {
       handleError(
-        "Failed to generate QR code: this account is not a merchant account number."
+        "Failed to generate QR code: this account is not a merchant account number.",
       );
     }
   };
+  const createA5ImageBlob = async (qrElement) => {
+    const rawImage = await toPng(qrElement, {
+      pixelRatio: 4,
+      backgroundColor: "#ffffff",
+    });
+
+    const canvas = document.createElement("canvas");
+    // Standard A5 at 300 DPI (148mm x 210mm)
+    canvas.width = 1748;
+    canvas.height = 2480;
+    const ctx = canvas.getContext("2d");
+
+    // White A5 page
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Fixed width of 85mm on a 148mm width page so QR code size remains constant
+    const targetWidthPx = (85 / 148) * canvas.width;
+
+    const img = new Image();
+    img.src = rawImage;
+    await new Promise((resolve) => {
+      img.onload = resolve;
+    });
+
+    const imgRatio = img.width / img.height;
+    const drawW = targetWidthPx;
+    const drawH = targetWidthPx / imgRatio;
+
+    // Perfectly centered on the A5 page
+    const drawX = (canvas.width - drawW) / 2;
+    const drawY = (canvas.height - drawH) / 2;
+
+    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), "image/png");
+    });
+  };
+
   const handleDownloadAllImages = async () => {
-    const zip = new JSZip();
     try {
+      const validIndices = [];
       for (let i = 0; i < qrCodeData.length; i++) {
         if (qrCodeRef.current[i]) {
-          // Use pixelRatio to increase resolution
-          const image = await toPng(qrCodeRef.current[i], {
-            pixelRatio: 2000 / 400,
-          }); // 400 is your displayed width
-          const base64Data = image.split(",")[1];
-          const imageName = `${merchantData[i].name || "QRCode"}_${i + 1}.png`;
-
-          zip.file(imageName, base64Data, { base64: true });
+          validIndices.push(i);
         }
       }
 
+      if (validIndices.length === 0) {
+        setError("No QR codes to download.");
+        return;
+      }
+
+      // If single QR code, download directly as an A5 PNG image
+      if (validIndices.length === 1) {
+        const i = validIndices[0];
+        const blob = await createA5ImageBlob(qrCodeRef.current[i]);
+        const merchantName = (merchantData[i]?.MER_NAME || `QRCode_${i + 1}`)
+          .trim()
+          .replace(/[/\\?%*:|"<>]/g, "_");
+        saveAs(blob, `${merchantName}.png`);
+        return;
+      }
+
+      // If multiple QR codes, pack all A5 images into a zip
+      const zip = new JSZip();
+      for (const i of validIndices) {
+        const blob = await createA5ImageBlob(qrCodeRef.current[i]);
+        const merchantName = (merchantData[i]?.MER_NAME || `QRCode_${i + 1}`)
+          .trim()
+          .replace(/[/\\?%*:|"<>]/g, "_");
+        zip.file(`${merchantName}.png`, blob);
+      }
+
       const content = await zip.generateAsync({ type: "blob" });
-      saveAs(content, "All_QR_Codes.zip");
+      const zipName = (merchantData[0]?.MER_NAME || "All_QR_Codes")
+        .trim()
+        .replace(/[/\\?%*:|"<>]/g, "_");
+      saveAs(content, `${zipName}.zip`);
     } catch (error) {
       console.error("Failed to download images:", error);
       setError("Failed to download images. Please try again.");
@@ -158,21 +232,140 @@ const Products = () => {
 
   const handleDownloadAllPDF = async () => {
     try {
-      const pdf = new jsPDF();
+      // Standard A5 portrait PDF (148mm x 210mm) matching handlePrintA5
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a5",
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth(); // 148 mm
+      const pageHeight = pdf.internal.pageSize.getHeight(); // 210 mm
+      const targetWidth = 85; // Fixed 85mm width on A5 sheet so QR code size remains constant
+
+      let pageCount = 0;
+
       for (let i = 0; i < qrCodeData.length; i++) {
         if (qrCodeRef.current[i]) {
-          const image = await toPng(qrCodeRef.current[i]);
-          pdf.addImage(image, "PNG", 10, 10, 180, 180);
+          const image = await toPng(qrCodeRef.current[i], {
+            pixelRatio: 4,
+            backgroundColor: "#ffffff",
+          });
 
-          if (i < qrCodeData.length - 1) {
-            pdf.addPage();
+          if (pageCount > 0) {
+            pdf.addPage("a5", "portrait");
           }
+          pageCount++;
+
+          const imgProps = pdf.getImageProperties(image);
+          const imgRatio = imgProps.width / imgProps.height;
+
+          const renderW = targetWidth;
+          const renderH = targetWidth / imgRatio;
+
+          // Center in the exact middle of the A5 sheet
+          const x = (pageWidth - renderW) / 2;
+          const y = (pageHeight - renderH) / 2;
+
+          pdf.addImage(image, "PNG", x, y, renderW, renderH);
         }
       }
-      pdf.save("All_QR_Codes.pdf");
+
+      if (pageCount === 0) {
+        setError("No QR codes to generate PDF.");
+        return;
+      }
+
+      const pdfName =
+        merchantData.length === 1 && merchantData[0]?.MER_NAME
+          ? `${merchantData[0].MER_NAME.trim().replace(/[/\\?%*:|"<>]/g, "_")}.pdf`
+          : "All_QR_Codes.pdf";
+
+      pdf.save(pdfName);
     } catch (error) {
       console.error("Failed to generate PDF:", error);
       setError("Failed to generate PDF. Please try again.");
+    }
+  };
+
+  const handlePrintA5 = async () => {
+    try {
+      const qrImages = [];
+      for (let i = 0; i < qrCodeData.length; i++) {
+        if (qrCodeRef.current[i]) {
+          const image = await toPng(qrCodeRef.current[i], { pixelRatio: 4 });
+          qrImages.push(image);
+        }
+      }
+
+      if (qrImages.length === 0) {
+        setError("No QR codes to print.");
+        return;
+      }
+
+      const printTitle =
+        merchantData.length === 1
+          ? (merchantData[0]?.MER_NAME || "QRCode").trim()
+          : "All_QR_Codes";
+
+      const pagesHtml = qrImages
+        .map(
+          (src, idx) => `
+        <div class="a5-page" ${idx < qrImages.length - 1 ? 'style="page-break-after: always;"' : ""}>
+          <img src="${src}" alt="QR Code" class="qr-image" />
+        </div>
+      `,
+        )
+        .join("");
+
+      const printWindow = window.open("", "_blank", "width=600,height=850");
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${printTitle}</title>
+          <style>
+            @page {
+              size: A5 portrait;
+              margin: 10mm;
+            }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { background: #fff; }
+            .a5-page {
+              width: 128mm;
+              height: 190mm;
+              margin: 0 auto;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .qr-image {
+              width: 85mm;
+              height: auto;
+              max-height: 160mm;
+              object-fit: contain;
+            }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .a5-page { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          ${pagesHtml}
+          <script>
+            window.onload = function() {
+              setTimeout(function() { window.print(); window.close(); }, 500);
+            };
+          </script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.document.title = printTitle;
+    } catch (error) {
+      console.error("Failed to print:", error);
+      setError("Failed to print. Please try again.");
     }
   };
 
@@ -193,6 +386,7 @@ const Products = () => {
   const handleAccountSubmit = async () => {
     setLoading(true);
     setError("");
+    setQrCodeData([]); // Reset QR code so it only appears after clicking "Generate"
 
     if (inputMethod === "manual" && !accountNumber) {
       setError("Please enter an account number.");
@@ -247,12 +441,12 @@ const Products = () => {
       if (response.data) {
         const responseData = response.data;
         const successfulResponses = responseData.filter(
-          (item) => item.STATUS === "SUCCESS"
+          (item) => item.STATUS === "SUCCESS",
         );
 
         if (successfulResponses.length === 0) {
           setError(
-            "all merchant account does not exist at least one valid account required"
+            "all merchant account does not exist at least one valid account required",
           );
           return;
         }
@@ -267,7 +461,7 @@ const Products = () => {
       log.error("API Error:", err);
       setStep(1);
       setError(
-        err.message || "An unexpected error occurred. Please try again later."
+        err.message || "An unexpected error occurred. Please try again later.",
       );
     } finally {
       setLoading(false);
@@ -277,7 +471,7 @@ const Products = () => {
   const handleBack = () => {
     setStep(1);
     setMerchantData([]);
-    setQrCodeData([""]);
+    setQrCodeData([]);
     setError("");
     setTipValue([]);
     setIncludeTip([]);
@@ -568,24 +762,24 @@ const Products = () => {
                               </div>
                               {(tipType[index] === "fixed" ||
                                 tipType[index] === "%") && (
-                                <div className="col-md-6 mb-3">
-                                  <Form.Label>Enter Tip Value:</Form.Label>
-                                  <Form.Control
-                                    type="number"
-                                    value={tipValue[index] || ""}
-                                    onChange={(event) =>
-                                      newhandleTipValueChange(event, index)
-                                    }
-                                    placeholder={
-                                      tipType[index] === "fixed"
-                                        ? "Enter fixed amount"
-                                        : "Enter percentage"
-                                    }
-                                    style={{ border: "1px solid #005580" }}
-                                    required
-                                  />
-                                </div>
-                              )}
+                                  <div className="col-md-6 mb-3">
+                                    <Form.Label>Enter Tip Value:</Form.Label>
+                                    <Form.Control
+                                      type="number"
+                                      value={tipValue[index] || ""}
+                                      onChange={(event) =>
+                                        newhandleTipValueChange(event, index)
+                                      }
+                                      placeholder={
+                                        tipType[index] === "fixed"
+                                          ? "Enter fixed amount"
+                                          : "Enter percentage"
+                                      }
+                                      style={{ border: "1px solid #005580" }}
+                                      required
+                                    />
+                                  </div>
+                                )}
                             </div>
                           )}
                         </div>
@@ -630,66 +824,141 @@ const Products = () => {
           <Col lg="6">
             <Card>
               <Card.Body>
-                {qrCodeData.map((qrString, index) => (
-                  <Col key={index} md={6} className="mb-3">
-                    <div
-                      ref={(el) => (qrCodeRef.current[index] = el)}
-                      style={{
-                        display: "inline-block",
-                        padding: "1px",
-                        borderRadius: "10px",
-                        backgroundColor: "white",
-                        textAlign: "center",
-                      }}
-                    >
-                      <QRCode
-                        value={qrString}
-                        logoImage="/image/abay-logo.png"
-                        logoWidth={600}
-                        bgColor="#FFFFFF"
-                        fgColor="#004461"
-                        size={3000}
-                        level="L"
-                        renderAs="svg"
+                {qrCodeData && qrCodeData.filter(Boolean).length > 0 ? (
+                  qrCodeData.map((qrString, index) => {
+                    if (!qrString) return null;
+                    return (
+                      <Col key={index} md={6} className="mb-3">
+                        <div
+                          ref={(el) => (qrCodeRef.current[index] = el)}
+                          style={{
+                            display: "inline-block",
+                            width: "340px",
+                            backgroundColor: "white",
+                            textAlign: "center",
+                            padding: "16px",
+                            borderRadius: "8px",
+                            boxSizing: "border-box",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "center" }}>
+                            <QRCode
+                              value={qrString}
+                              logoImage="/image/abay-logo.png"
+                              logoWidth={600}
+                              bgColor="#FFFFFF"
+                              fgColor="#004461"
+                              size={3000}
+                              level="L"
+                              renderAs="svg"
+                              style={{
+                                paddingTop: "2px",
+                                width: 180,
+                                height: 180,
+                              }}
+                            />
+                          </div>
+                          <strong
+                            style={{
+                              display: "block",
+                              marginTop: "26px",
+                              lineHeight: "1.2",
+                              textAlign: "center",
+                              width: "100%",
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "block",
+                                fontWeight: "bold",
+                                fontSize: getMerchantNameFontSize(
+                                  merchantData[index]?.MER_NAME,
+                                ),
+                                whiteSpace: "nowrap",
+                                color: "#000000",
+                              }}
+                            >
+                              {merchantData[index]?.MER_NAME || "N/A"}
+                            </span>
+                            <div style={{ marginTop: "3px" }}>
+                              <Form.Label
+                                style={{
+                                  fontWeight: "bold",
+                                  fontSize: "18px",
+                                  marginBottom: 0,
+                                  color: "#000000"
+                                }}
+                              >
+                                Merchant ID :
+                              </Form.Label>{" "}
+                              <span
+                                style={{ fontWeight: "bold", fontSize: "18px",color: "#000000"}}
+                              >
+                                {merchantData[index]?.MER_IDEN || "N/A"}
+                              </span>
+                            </div>
+                          </strong>
+                        </div>
+                      </Col>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-5 text-muted">
+                    <p style={{ fontSize: "15px" }}>
+                      Please review the merchant information and click{" "}
+                      <strong>"Generate"</strong> to create the QR code.
+                    </p>
+                    {/* <p style={{ fontSize: "13px", marginTop: "16px" }}>
+                      Looking for a previously generated QR code? View & download it anytime in{" "}
+                      <Link
+                        to="/view_qr"
                         style={{
-                          paddingTop: "2px",
-                          width: 400,
-                          height: 400,
+                          color: "#005580",
+                          fontWeight: "700",
+                          textDecoration: "underline",
                         }}
-                      />
-                      <br />
-                      <strong style={{ fontWeight: "bold", fontSize: "16px" }}>
-                        {merchantData[index]?.MER_NAME || "N/A"}{" "}
-                      </strong>
-                      <br />
-                      <Form.Label
-                        style={{ fontWeight: "bold", fontSize: "14px" }}
                       >
-                        Merchant ID :
-                      </Form.Label>
-                      <span style={{ fontWeight: "bold", fontSize: "14px" }}>
-                        {merchantData[index]?.MER_IDEN || "N/A"}
-                      </span>
-                    </div>
-                  </Col>
-                ))}
+                        Generated QR Codes
+                      </Link>
+                      .
+                    </p> */}
+                  </div>
+                )}
 
-                {qrCodeData.length > 0 && (
-                  <div className="mt-3">
+                {qrCodeData && qrCodeData.filter(Boolean).length > 0 && (
+                  <div
+                    className="mt-3"
+                    style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}
+                  >
                     <Button
                       style={{
-                        marginRight: "10px",
                         backgroundColor: "#005580",
+                        borderColor: "#005580",
+                        fontWeight: "500",
                       }}
                       onClick={handleDownloadAllImages}
                     >
-                      Download All as Images
+                      🖼️ Download Image
                     </Button>
                     <Button
-                      style={{ backgroundColor: "#005580" }}
+                      style={{
+                        backgroundColor: "#005580",
+                        borderColor: "#005580",
+                        fontWeight: "500",
+                      }}
                       onClick={handleDownloadAllPDF}
                     >
-                      Download All as PDF
+                      📄 Download PDF
+                    </Button>
+                    <Button
+                      style={{
+                        backgroundColor: "#c8820e",
+                        borderColor: "#c8820e",
+                        fontWeight: "bold",
+                      }}
+                      onClick={handlePrintA5}
+                    >
+                      🖨️ Print
                     </Button>
                   </div>
                 )}

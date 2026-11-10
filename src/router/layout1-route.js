@@ -9,6 +9,8 @@ import Productadd from "../views/backend/Main/Productadd";
 import View_Branch_merchants from "../views/backend/Main/View_Branch_merchants";
 import Branch_performance from "../views/backend/Main/Branch_performance";
 import CreateMerchantForm from "../views/backend/Main/create_merchant";
+import ViewMerchant from "../views/backend/Main/view_merchant";
+import ViewQr from "../views/backend/Main/View_qr";
 
 const Layout1Route = () => {
   const location = useLocation();
@@ -18,7 +20,7 @@ const Layout1Route = () => {
       <CSSTransition key={location.key} classNames="fade" timeout={300}>
         <Switch location={location}>
           {/* Main routes */}
-          <Route path="/" exact component={Dashbord} />
+          <Route path={["/", "/dashboard", "/Dashbord"]} exact component={Dashbord} />
           <Route path="/product" component={Product} />
           <Route path="/viewAllMerchant" component={viewAllMerchant} />
           <Route
@@ -28,6 +30,8 @@ const Layout1Route = () => {
           <Route path="/Branch_performance" component={Branch_performance} />
           <Route path="/product-add" component={Productadd} />
           <Route path="/create_merchant" component={CreateMerchantForm} />
+          <Route path="/view_merchant" component={ViewMerchant} />
+          <Route path="/view_qr" component={ViewQr} />
 
           {/* Redirect to dashboard if the route is not found */}
           <Redirect to="/" />

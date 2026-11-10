@@ -7,6 +7,7 @@ import View_Branch_merchants from "./views/backend/Main/View_Branch_merchants";
 import CreateMerchantForm from "./views/backend/Main/create_merchant";
 import view_merchant from "./views/backend/Main/view_merchant";
 import view_qr from "./views/backend/Main/View_qr";
+import Dashbord from "./views/backend/Main/Dashbord";
 import ProtectedRoute from "./middleware/protected"; // Import ProtectedRoute
 import "./assets/scss/backend.scss";
 import "./assets/css/custom.css";
@@ -37,7 +38,7 @@ function App() {
             <div className="content-page">
               {/* Protected Routes */}
               <ProtectedRoute path="/Layout1" component={LayoutsRoute} />
-              <ProtectedRoute path="/Product" component={Product} />
+              <ProtectedRoute path={["/product", "/Product"]} component={Product} />
               <ProtectedRoute
                 path="/create_merchant"
                 component={CreateMerchantForm}
@@ -53,10 +54,12 @@ function App() {
                 component={Branch_performance}
               />
 
-              {/* Redirect root path to sign-in if not authenticated */}
-              <Route exact path="/">
-                <Redirect to="/auth/sign-in" />
-              </Route>
+              {/* Dashboard Route (Protected) */}
+              <ProtectedRoute
+                exact
+                path={["/", "/dashboard", "/Dashbord"]}
+                component={Dashbord}
+              />
             </div>
             <FooterStyle />
           </div>
